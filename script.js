@@ -14,9 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBtn = document.getElementById('saveBtn');
     const openBtn = document.getElementById('openBtn');
     const fileInput = document.getElementById('fileInput');
+    const exportBtn = document.getElementById('exportBtn');
     const sidebar = document.getElementById('sidebar');
+    const controls = document.querySelector('.controls');
 
-    if (!table || !addRowBtn || !sidebar || !saveBtn || !openBtn || !fileInput) {
+    if (!table || !addRowBtn || !sidebar || !saveBtn || !openBtn || !fileInput || !exportBtn || !controls) {
         console.error("Required element not found!");
         return;
     }
@@ -156,6 +158,61 @@ document.addEventListener('DOMContentLoaded', () => {
         addRemoveButton(newRow);
     });
 
+    // --- Export as PNG ---
+    exportBtn.addEventListener('click', async () => {
+        const elementsToHide = [sidebar, controls];
+        const actionsColumnCells = table.querySelectorAll('tr > :last-child');
+        const tableImages = tableBody.querySelectorAll('img');
+        const originalSrcs = new Map();
+
+        // Helper function to convert image src to a data URL
+        const toDataURL = async (img) => {
+            const response = await fetch(img.src);
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        };
+
+        // Hide elements
+        elementsToHide.forEach(el => el.classList.add('export-hidden'));
+        actionsColumnCells.forEach(cell => cell.classList.add('export-hidden'));
+
+        try {
+            // Temporarily replace image sources with data URLs
+            await Promise.all(Array.from(tableImages).map(async (img) => {
+                originalSrcs.set(img, img.src); // Save original src
+                const dataUrl = await toDataURL(img);
+                img.src = dataUrl;
+            }));
+
+            const canvas = await html2canvas(document.getElementById('main-content'));
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = 'table-export.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error("Error exporting table:", error);
+            alert("Sorry, there was an error exporting the table.");
+        } finally {
+            // Restore original image sources
+            tableImages.forEach(img => {
+                if (originalSrcs.has(img)) {
+                    img.src = originalSrcs.get(img);
+                }
+            });
+            // Unhide elements
+            elementsToHide.forEach(el => el.classList.remove('export-hidden'));
+            actionsColumnCells.forEach(cell => cell.classList.remove('export-hidden'));
+        }
+    });
+
+
     // --- Save and Open Functionality ---
 
     // Save Table Data
@@ -171,7 +228,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cell = cells[i];
                 const images = cell.querySelectorAll('img');
                 if (images.length > 0) {
-                    const imageUrls = Array.from(images).map(img => img.src);
+                    // Convert the full image URL to a relative path for saving
+                    const imageUrls = Array.from(images).map(img => {
+                        try {
+                            // Create a URL object to easily access the path
+                            const url = new URL(img.src);
+                            // Return the path, removing the leading '/'
+                            return url.pathname.substring(1);
+                        } catch (e) {
+                            // Fallback for cases where URL parsing might fail
+                            return img.getAttribute('src');
+                        }
+                    });
                     rowData.push({ type: 'images', content: imageUrls });
                 } else {
                     rowData.push({ type: 'text', content: cell.textContent });
@@ -234,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     wrapper.className = 'cell-content-wrapper';
                     cellData.content.forEach(imageUrl => {
                         const img = document.createElement('img');
-                        // Use the full URL for loaded images
+                        // Loaded imageUrl is relative, browser handles the rest
                         img.src = imageUrl;
                         wrapper.appendChild(img);
                     });

@@ -87,3 +87,7 @@ button {
     padding: 10px 15px;
     cursor: pointer;
 }
+
+.export-hidden {
+    display: none !important;
+}
