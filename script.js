@@ -11,9 +11,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const table = document.getElementById('editableTable');
     const addRowBtn = document.getElementById('addRowBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const openBtn = document.getElementById('openBtn');
+    const fileInput = document.getElementById('fileInput');
     const sidebar = document.getElementById('sidebar');
 
-    if (!table || !addRowBtn || !sidebar) {
+    if (!table || !addRowBtn || !sidebar || !saveBtn || !openBtn || !fileInput) {
         console.error("Required element not found!");
         return;
     }
@@ -152,4 +155,95 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         addRemoveButton(newRow);
     });
+
+    // --- Save and Open Functionality ---
+
+    // Save Table Data
+    saveBtn.addEventListener('click', () => {
+        const tableData = [];
+        const rows = tableBody.querySelectorAll('tr');
+
+        rows.forEach(row => {
+            const rowData = [];
+            const cells = row.querySelectorAll('td');
+            // Iterate over cells, excluding the last one (actions column)
+            for (let i = 0; i < cells.length - 1; i++) {
+                const cell = cells[i];
+                const images = cell.querySelectorAll('img');
+                if (images.length > 0) {
+                    const imageUrls = Array.from(images).map(img => img.src);
+                    rowData.push({ type: 'images', content: imageUrls });
+                } else {
+                    rowData.push({ type: 'text', content: cell.textContent });
+                }
+            }
+            tableData.push(rowData);
+        });
+
+        const jsonData = JSON.stringify(tableData, null, 2);
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'table-data.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+
+    // Trigger File Input
+    openBtn.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // Read and Load File
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) {
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = JSON.parse(event.target.result);
+                rebuildTable(data);
+            } catch (error) {
+                console.error("Error parsing JSON file:", error);
+                alert("Invalid JSON file.");
+            }
+        };
+        reader.readAsText(file);
+
+        // Reset file input to allow opening the same file again
+        fileInput.value = '';
+    });
+
+    // Rebuild Table from Data
+    const rebuildTable = (data) => {
+        // Clear existing table body
+        tableBody.innerHTML = '';
+
+        data.forEach(rowData => {
+            const newRow = tableBody.insertRow();
+            rowData.forEach(cellData => {
+                const newCell = newRow.insertCell();
+                if (cellData.type === 'images') {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'cell-content-wrapper';
+                    cellData.content.forEach(imageUrl => {
+                        const img = document.createElement('img');
+                        // Use the full URL for loaded images
+                        img.src = imageUrl;
+                        wrapper.appendChild(img);
+                    });
+                    newCell.appendChild(wrapper);
+                } else {
+                    newCell.textContent = cellData.content;
+                }
+            });
+            addRemoveButton(newRow);
+        });
+    };
 });
