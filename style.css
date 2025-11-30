@@ -48,6 +48,14 @@ th, td {
     border: 1px solid #ddd;
     padding: 8px;
     text-align: left;
+    vertical-align: top;
+}
+
+.cell-content-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
 }
 
 th {

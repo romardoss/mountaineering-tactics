@@ -35,15 +35,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tableBody.addEventListener('drop', (e) => {
         e.preventDefault();
-        const target = e.target;
-        if (target && target.tagName === 'TD') {
+        let targetCell = e.target;
+
+        // Traverse up to find the parent TD
+        while (targetCell && targetCell.tagName !== 'TD') {
+            targetCell = targetCell.parentElement;
+        }
+
+        if (targetCell && targetCell.tagName === 'TD') {
             const imageUrl = e.dataTransfer.getData('text/plain');
             if (imageUrl) {
-                target.innerHTML = ''; // Clear the cell
+                let wrapper = targetCell.querySelector('.cell-content-wrapper');
+
+                // If wrapper doesn't exist, create it
+                if (!wrapper) {
+                    wrapper = document.createElement('div');
+                    wrapper.className = 'cell-content-wrapper';
+                    // Clear existing content (like text) and append the wrapper
+                    targetCell.innerHTML = '';
+                    targetCell.appendChild(wrapper);
+                }
+
                 const img = document.createElement('img');
                 img.src = imageUrl;
-                target.appendChild(img);
+                wrapper.appendChild(img); // Append image to wrapper
             }
+        }
+    });
+
+    // --- Right-click to delete image ---
+    tableBody.addEventListener('contextmenu', (e) => {
+        // Check if the right-clicked element is an image
+        if (e.target.tagName === 'IMG') {
+            e.preventDefault(); // Prevent the browser's context menu
+            e.target.remove(); // Remove the image
         }
     });
 
@@ -78,6 +103,10 @@ document.addEventListener('DOMContentLoaded', () => {
     tableBody.addEventListener('click', (e) => {
         const target = e.target;
         if (target && target.tagName === 'TD') {
+            // Prevent editing if cell contains an image
+            if (target.querySelector('img')) {
+                return;
+            }
             // Check if the cell is not already being edited
             if (!target.querySelector('input')) {
                 makeCellEditable(target);
