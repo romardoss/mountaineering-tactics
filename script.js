@@ -1,4 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
+
+    // --- CONFIGURATION ---
+    // Manually list your image files here.
+    // Due to browser security, we cannot automatically read files from a folder.
+    const imageUrls = [
+        'images/camera-flash-off-svgrepo-com.png',
+        'images/image1.png',
+        'images/image2.png'
+    ];
+
     const table = document.getElementById('editableTable');
     const addRowBtn = document.getElementById('addRowBtn');
     const sidebar = document.getElementById('sidebar');
@@ -9,11 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Image Loading for Sidebar ---
-    const imageUrls = ['images/image1.png', 'images/image2.png']; // Assumes you have these images
     imageUrls.forEach(url => {
         const img = document.createElement('img');
         img.src = url;
         img.draggable = true;
+
+        // Extract filename for the title attribute
+        const filename = url.substring(url.lastIndexOf('/') + 1);
+        img.title = filename; // This shows the filename on hover
 
         img.addEventListener('dragstart', (e) => {
             e.dataTransfer.setData('text/plain', url);
