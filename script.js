@@ -4,9 +4,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Manually list your image files here.
     // Due to browser security, we cannot automatically read files from a folder.
     const imageUrls = [
-        'images/camera-flash-off-svgrepo-com.png',
-        'images/image1.png',
-        'images/image2.png'
+        'images/Вибирати мотузку.png',
+        'images/Видавати мотузку.png',
+        'images/Закріпити мотузку.png',
+        'images/Здійснювати контроль мотузки.png',
+        'images/Здійснювати страховку.png',
+        'images/Маркувати мотузку.png',
+        'images/Наведення, виготовлення.png',
+        'images/Натягування перил.png',
+        'images/Проходження етапу.png',
+        'images/Розібрати етап.png'
     ];
 
     const table = document.getElementById('editableTable');
