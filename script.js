@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'images/Проходження етапу.png',
         'images/Розібрати етап.png'
     ];
-
+    
     const table = document.getElementById('editableTable');
     const addRowBtn = document.getElementById('addRowBtn');
     const saveBtn = document.getElementById('saveBtn');
@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const addRemoveButton = (row) => {
         const newCell = row.insertCell();
         const removeBtn = document.createElement('button');
+        newCell.className = 'buttonRow';
         removeBtn.textContent = 'Remove';
         removeBtn.addEventListener('click', () => {
             row.remove();
@@ -170,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event listener for clicks on table cells
     tableBody.addEventListener('click', (e) => {
         const target = e.target;
-        if (target && target.tagName === 'TD') {
+        if (target && target.tagName === 'TD' && !target.classList.contains('buttonRow')) {
             // If brush is active, handle painting and stop further actions
             if (isBrushActive) {
                 const rect = target.getBoundingClientRect();
