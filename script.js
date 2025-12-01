@@ -113,12 +113,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Right-click to delete image ---
+    // --- Right-click to delete image and remove paint ---
     tableBody.addEventListener('contextmenu', (e) => {
+        let actionTaken = false;
+
         // Check if the right-clicked element is an image
         if (e.target.tagName === 'IMG') {
-            e.preventDefault(); // Prevent the browser's context menu
             e.target.remove(); // Remove the image
+            actionTaken = true;
+        }
+
+        // Find the cell that was clicked in
+        const cell = e.target.closest('td');
+        if (cell) {
+            const borders = ['painted-top', 'painted-right', 'painted-bottom', 'painted-left'];
+            // Check if any border is painted before removing them
+            if (borders.some(b => cell.classList.contains(b))) {
+                cell.classList.remove(...borders);
+                actionTaken = true;
+            }
+        }
+
+        // Prevent the browser's context menu only if an action was performed
+        if (actionTaken) {
+            e.preventDefault();
         }
     });
 
