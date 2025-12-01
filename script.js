@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let i = 0; i < columnCount; i++) {
             const newCell = newRow.insertCell();
-            newCell.textContent = 'Data'; // Default text
+            newCell.textContent = '-'; // Default text
         }
         addRemoveButton(newRow);
     });
@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add new cell to each body row
         tableBody.querySelectorAll('tr').forEach(row => {
             const newCell = row.insertCell(row.cells.length - 1);
-            newCell.textContent = 'Data';
+            newCell.textContent = '-';
         });
     });
 
