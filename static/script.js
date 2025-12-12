@@ -4,16 +4,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Manually list your image files here.
     // Due to browser security, we cannot automatically read files from a folder.
     const imageUrls = [
-        'images/Вибирати мотузку.png',
-        'images/Видавати мотузку.png',
-        'images/Закріпити мотузку.png',
-        'images/Здійснювати контроль мотузки.png',
-        'images/Здійснювати страховку.png',
-        'images/Маркувати мотузку.png',
-        'images/Наведення, виготовлення.png',
-        'images/Натягування перил.png',
-        'images/Проходження етапу.png',
-        'images/Розібрати етап.png'
+        'images/Frame 1.svg',
+        'images/Frame 2.svg',
+        'images/Frame 3.svg',
+        'images/Frame 4.svg',
+        'images/Frame 5.svg',
+        'images/Frame 6.svg',
+        'images/Frame 7.svg',
+        'images/Frame 8.svg',
+        'images/Frame 9.svg',
+        'images/Frame 10.svg',
+        'images/Frame 11.svg',
+        'images/Frame 12.svg',
+        'images/Frame 13.svg',
+        'images/Frame 14.svg',
+        'images/Frame 15.svg',
+        'images/Frame 16.svg',
     ];
     
     const table = document.getElementById('editableTable');
@@ -69,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const newCell = row.insertCell();
         const removeBtn = document.createElement('button');
         newCell.className = 'buttonRow';
-        removeBtn.textContent = 'Remove';
+        removeBtn.textContent = 'Видалити часову стадію';
         removeBtn.addEventListener('click', () => {
             row.remove();
         });
