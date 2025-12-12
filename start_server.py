@@ -6,14 +6,19 @@ import os
 # --- Configuration ---
 PORT = 8000
 MAX_PORTS_TO_TRY = 20
+STATIC_DIR = "static"
 # ---
 
 class MyRequestHandler(http.server.SimpleHTTPRequestHandler):
-    def do_GET(self):
-        # Serve index.html for the root path
-        if self.path == '/':
-            self.path = '/static/index.html'
-        return http.server.SimpleHTTPRequestHandler.do_GET(self)
+    def translate_path(self, path):
+        abs_static = os.path.abspath(STATIC_DIR)
+        if path == '/':
+            path = '/index.html'   
+        elif path.startswith('/images'):
+            path = path
+        else:
+            path == '/index.html'
+        return os.path.join(abs_static, path.lstrip("/"))
 
 # Change to the script's directory to serve files from the correct location
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
