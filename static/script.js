@@ -16,10 +16,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const brushBtn = document.getElementById('brushBtn');
     const sidebar = document.getElementById('sidebar');
     const controls = document.querySelector('.controls');
+    const helpBtn = document.getElementById('helpBtn');
 
     if (!table || !addRowBtn || !sidebar || !saveBtn || !openBtn || !fileInput || !exportBtn || !controls || !addColBtn || !removeColBtn || !brushBtn) {
         console.error("Required element not found!");
         return;
+    }
+
+    const helpModal = document.getElementById('helpModal');
+    if (helpBtn && helpModal) {
+        const closeBtn = helpModal.querySelector('.help-modal__close');
+        const openHelp = () => {
+            helpModal.removeAttribute('hidden');
+            helpBtn.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+            closeBtn?.focus();
+        };
+        const closeHelp = () => {
+            helpModal.setAttribute('hidden', '');
+            helpBtn.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+            helpBtn.focus();
+        };
+        helpBtn.addEventListener('click', () => openHelp());
+        helpModal.querySelectorAll('[data-close-modal]').forEach((el) => {
+            el.addEventListener('click', () => closeHelp());
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !helpModal.hidden) {
+                closeHelp();
+            }
+        });
     }
 
     let isBrushActive = false;
@@ -246,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Export as PNG ---
     exportBtn.addEventListener('click', async () => {
-        const elementsToHide = [sidebar, controls];
+        const elementsToHide = [sidebar, controls, helpBtn].filter(Boolean);
         const actionsColumnCells = table.querySelectorAll('tr > :last-child');
         const tableImages = tableBody.querySelectorAll('img');
         const originalSrcs = new Map();

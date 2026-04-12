@@ -30,17 +30,169 @@ body {
     margin-bottom: 10px;
 }
 
+/* Main logo is absolutely positioned; padding-top reserves space so title/table never sit under it */
 #main-content {
+    position: relative;
     flex-grow: 1;
     padding: 20px;
+    padding-top: 152px;
     min-width: 0;
     /* Prevents table from expanding flex container */
     overflow-x: auto;
     /* Allows table to scroll if it overflows */
 }
 
+#icon {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 2;
+    display: block;
+    height: 120px;
+    width: auto;
+    /* Leave room for .help-link on the right */
+    max-width: calc(100% - 40px - 52px);
+    object-fit: contain;
+}
+
+.help-link {
+    position: absolute;
+    /* Vertically centered with 120px-tall #icon (both start at top 20px in main column) */
+    top: 60px;
+    right: 20px;
+    z-index: 2;
+    box-sizing: border-box;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    background: #fff;
+    color: #333;
+    font-family: inherit;
+    font-size: 1.25rem;
+    font-weight: bold;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.help-link:hover {
+    background: #f5f5f5;
+    border-color: #bbb;
+}
+
+.help-link:focus-visible {
+    outline: 2px solid #4a90d9;
+    outline-offset: 2px;
+}
+
+.help-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.help-modal[hidden] {
+    display: none !important;
+}
+
+.help-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.help-modal__panel {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 520px;
+    max-height: min(90vh, 640px);
+    overflow: auto;
+    margin: 0;
+    padding: 20px 44px 20px 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.help-modal__panel h2 {
+    margin: 0 0 12px;
+    font-size: 1.25rem;
+}
+
+.help-modal__body {
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: #222;
+}
+
+.help-modal__body ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.help-modal__body li {
+    margin-bottom: 8px;
+}
+
+.help-modal__more {
+    margin: 16px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid #eee;
+    font-size: 0.95rem;
+}
+
+.help-modal__more a {
+    color: #1a73e8;
+}
+
+.help-modal__close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #666;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.help-modal__close:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.help-modal__close:focus-visible {
+    outline: 2px solid #4a90d9;
+    outline-offset: 2px;
+}
+
 h1 {
-    text-align: center;
+    margin: 0;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    clear: both;
 }
 
 table {

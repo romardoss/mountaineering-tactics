@@ -62,5 +62,181 @@
     {
         "path": "images/Frame 16.svg",
         "name": "маркувати мотузку"
+    },
+    {
+        "path": "images/Frame 17.svg",
+        "name": "перенести, передати"
+    },
+    {
+        "path":"images/Frame 18.svg",
+        "name": "учасник #1"
+    },
+    {
+        "path":"images/Frame 19.svg",
+        "name": "учасник #2"
+    },
+    {
+        "path":"images/Frame 20.svg",
+        "name": "учасник #3"
+    },
+    {
+        "path":"images/Frame 21.svg",
+        "name": "учасник #4"
+    },
+    {
+        "path":"images/Frame 22.svg",
+        "name": "учасник #5"
+    },
+    {
+        "path":"images/Frame 23.svg",
+        "name": "учасник #6"
+    },
+    {
+        "path":"images/Frame 24.svg",
+        "name": "мотузка основна #1"
+    },
+    {
+        "path":"images/Frame 25.svg",
+        "name": "мотузка основна #2"
+    },
+    {
+        "path":"images/Frame 26.svg",
+        "name": "мотузка основна #3"
+    },
+    {
+        "path":"images/Frame 27.svg",
+        "name": "мотузка основна #4"
+    },
+    {
+        "path":"images/Frame 28.svg",
+        "name": "мотузка допоміжна #1"
+    },
+    {
+        "path":"images/Frame 29.svg",
+        "name": "мотузка допоміжна #2"
+    },
+    {
+        "path":"images/Frame 30.svg",
+        "name": "мотузка допоміжна #3"
+    },
+    {
+        "path":"images/Frame 31.svg",
+        "name": "мотузка допоміжна #4"
+    },
+    {
+        "path":"images/Frame 32.svg",
+        "name": "опора"
+    },
+    {
+        "path":"images/Frame 33.svg",
+        "name": "поліспаст"
+    },
+    {
+        "path":"images/Frame 34.svg",
+        "name": "петля з проміжним карабіном"
+    },
+    {
+        "path":"images/Frame 35.svg",
+        "name": "петля з проміжним карабіном, суддівська"
+    },
+    {
+        "path":"images/Frame 36.svg",
+        "name": "петля без карабіну"
+    },
+    {
+        "path":"images/Frame 37.svg",
+        "name": "петля без карабіну, суддівська"
+    },
+    {
+        "path":"images/Frame 38.svg",
+        "name": "перила"
+    },
+    {
+        "path":"images/Frame 39.svg",
+        "name": "перила суддівські"
+    },
+    {
+        "path":"images/Frame 40.svg",
+        "name": "вантажні перила"
+    },
+    {
+        "path":"images/Frame 41.svg",
+        "name": "вантажні перила суддівські"
+    },
+    {
+        "path":"images/Frame 42.svg",
+        "name": "вантаж, рюкзак"
+    },
+    {
+        "path":"images/Frame 43.svg",
+        "name": "карабін"
+    },
+    {
+        "path":"images/Frame 44.svg",
+        "name": "пристрій для здьоргу мотузки"
+    },
+    {
+        "path":"images/Frame 45.svg",
+        "name": "мотузка страхувальна суддівська #1"
+    },
+    {
+        "path":"images/Frame 46.svg",
+        "name": "мотузка страхувальна суддівська #2"
+    },
+    {
+        "path":"images/Frame 47.svg",
+        "name": "мотузка страхувальна суддівська #3"
+    },
+    {
+        "path": "images/Frame 48.svg",
+        "name": "мотузка страхувальна суддівська #4"
+    },
+    {
+        "path": "images/Frame 49.svg",
+        "name": "мотузка страхувальна суддівська"
+    },
+    {
+        "path": "images/Frame 50.svg",
+        "name": "ноші"
+    },
+    {
+        "path": "images/Frame 51.svg",
+        "name": "мотузка основна, перильна"
+    },
+    {
+        "path": "images/Frame 52.svg",
+        "name": "мотузка основна, перильна #1"
+    },
+    {
+        "path": "images/Frame 53.svg",
+        "name": "мотузка основна, перильна #2"
+    },
+    {
+        "path": "images/Frame 54.svg",
+        "name": "мотузка основна, перильна #3"
+    },
+    {
+        "path": "images/Frame 55.svg",
+        "name": "мотузка основна, перильна #4"
+    },
+    {
+        "path": "images/Frame 56.svg",
+        "name": "мотузка основна, перильна, суддівська"
+    },
+    {
+        "path": "images/Frame 57.svg",
+        "name": "мотузка основна, перильна, суддівська #1"
+    },
+    {
+        "path": "images/Frame 58.svg",
+        "name": "мотузка основна, перильна, суддівська #2"
+    },
+    {
+        "path": "images/Frame 59.svg",
+        "name": "мотузка основна, перильна, суддівська #3"
+    },
+    {
+        "path": "images/Frame 60.svg",
+        "name": "мотузка основна, перильна, суддівська #4"
     }
 ]
