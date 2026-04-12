@@ -479,29 +479,147 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    tableBody.addEventListener('click', (e) => {
-        const target = e.target;
-        if (target && target.tagName === 'TD' && !target.classList.contains('buttonRow')) {
-            if (isBrushActive) {
-                const rect = target.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const borderThreshold = 8;
-                const distances = {
-                    top: y,
-                    bottom: rect.height - y,
-                    left: x,
-                    right: rect.width - x,
-                };
-                const closestEdge = Object.keys(distances).reduce((a, b) => (distances[a] < distances[b] ? a : b));
-                if (distances[closestEdge] <= borderThreshold) {
-                    target.classList.toggle(`painted-${closestEdge}`);
-                }
-                return;
+    /**
+     * Last direct child that is an image or generic symbol (order in the cell).
+     * @param {HTMLElement} wrapper
+     * @returns {HTMLElement | null}
+     */
+    function getLastMediaElement(wrapper) {
+        let last = null;
+        for (const ch of wrapper.children) {
+            if (ch.tagName === 'IMG' || ch.classList.contains('symbol-generic')) {
+                last = ch;
             }
-            if (target.querySelector('img') || target.querySelector('.symbol-generic')) return;
-            if (!target.querySelector('input')) makeCellEditable(target);
         }
+        return last;
+    }
+
+    /**
+     * New empty text block placed immediately after the last image/symbol (or at end if none).
+     * @param {HTMLElement} wrapper
+     * @returns {HTMLSpanElement}
+     */
+    function appendNewCellTextAfterLastMedia(wrapper) {
+        const span = document.createElement('span');
+        span.className = 'cell-text';
+        span.textContent = '';
+        const lastMedia = getLastMediaElement(wrapper);
+        if (lastMedia) {
+            lastMedia.insertAdjacentElement('afterend', span);
+        } else {
+            wrapper.appendChild(span);
+        }
+        return span;
+    }
+
+    /**
+     * @param {HTMLElement} wrapper
+     * @returns {object[]}
+     */
+    function serializeMixedSegments(wrapper) {
+        const segments = [];
+        for (const el of wrapper.children) {
+            if (el.tagName === 'IMG') {
+                try {
+                    const url = new URL(el.src);
+                    segments.push({ type: 'img', src: url.pathname.substring(1) });
+                } catch {
+                    segments.push({ type: 'img', src: el.getAttribute('src') });
+                }
+            } else if (el.classList.contains('symbol-generic')) {
+                try {
+                    segments.push(JSON.parse(el.getAttribute('data-symbol-json') || '{}'));
+                } catch {
+                    segments.push({ kind: 'generic', error: true });
+                }
+            } else if (el.classList.contains('cell-text')) {
+                segments.push({ type: 'text', text: el.textContent });
+            }
+        }
+        return segments;
+    }
+
+    /**
+     * @param {HTMLElement} cell
+     * @param {HTMLSpanElement} textSpan
+     */
+    function editCellCaption(cell, textSpan) {
+        const wrapper = cell.querySelector('.cell-content-wrapper');
+        if (!wrapper || !textSpan || !textSpan.classList.contains('cell-text')) return;
+        if (cell.querySelector('.cell-text-input')) return;
+        const span = textSpan;
+        const original = span.textContent;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'cell-text-input';
+        input.value = original;
+        span.replaceWith(input);
+        input.focus();
+        const saveContent = () => {
+            const next = document.createElement('span');
+            next.className = 'cell-text';
+            next.textContent = input.value;
+            input.replaceWith(next);
+        };
+        input.addEventListener('blur', saveContent);
+        input.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter') saveContent();
+            else if (ev.key === 'Escape') {
+                const next = document.createElement('span');
+                next.className = 'cell-text';
+                next.textContent = original;
+                input.replaceWith(next);
+            }
+        });
+    }
+
+    tableBody.addEventListener('click', (e) => {
+        const cell = e.target.closest('td');
+        if (!cell || cell.classList.contains('buttonRow')) return;
+
+        if (isBrushActive) {
+            const rect = cell.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const borderThreshold = 8;
+            const distances = {
+                top: y,
+                bottom: rect.height - y,
+                left: x,
+                right: rect.width - x,
+            };
+            const closestEdge = Object.keys(distances).reduce((a, b) => (distances[a] < distances[b] ? a : b));
+            if (distances[closestEdge] <= borderThreshold) {
+                cell.classList.toggle(`painted-${closestEdge}`);
+            }
+            return;
+        }
+
+        const clickedText = e.target.closest('.cell-text');
+        if (clickedText && cell.contains(clickedText)) {
+            if (!cell.querySelector('input')) editCellCaption(cell, clickedText);
+            return;
+        }
+
+        if (e.target.closest('.symbol-generic') || e.target.closest('td img')) {
+            return;
+        }
+
+        const wrapper = cell.querySelector('.cell-content-wrapper');
+        if (wrapper) {
+            if (!cell.querySelector('input')) {
+                const lastEl = wrapper.lastElementChild;
+                if (lastEl && lastEl.classList.contains('cell-text')) {
+                    editCellCaption(cell, lastEl);
+                } else {
+                    const span = appendNewCellTextAfterLastMedia(wrapper);
+                    editCellCaption(cell, span);
+                }
+            }
+            return;
+        }
+
+        if (!cell.querySelector('input')) makeCellEditable(cell);
     });
 
     addRowBtn.addEventListener('click', () => {
@@ -631,27 +749,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 const wrapper = cell.querySelector('.cell-content-wrapper');
                 if (wrapper) {
-                    const bits = [];
-                    wrapper.querySelectorAll('img, .symbol-generic').forEach((node) => {
-                        if (node.tagName === 'IMG') {
-                            try {
-                                const url = new URL(node.src);
-                                bits.push(url.pathname.substring(1));
-                            } catch {
-                                bits.push(node.getAttribute('src'));
-                            }
-                        } else if (node.classList.contains('symbol-generic')) {
-                            try {
-                                bits.push(JSON.parse(node.getAttribute('data-symbol-json') || '{}'));
-                            } catch {
-                                bits.push({ kind: 'generic', error: true });
-                            }
-                        }
-                    });
-                    if (bits.length) {
-                        rowData.push({ type: 'images', content: bits, paintedBorders });
+                    const segments = serializeMixedSegments(wrapper);
+                    if (segments.length) {
+                        rowData.push({ type: 'mixed', segments, paintedBorders });
                     } else {
-                        rowData.push({ type: 'text', content: cell.textContent, paintedBorders });
+                        rowData.push({ type: 'text', content: '', paintedBorders });
                     }
                 } else {
                     rowData.push({ type: 'text', content: cell.textContent, paintedBorders });
@@ -713,7 +815,41 @@ document.addEventListener('DOMContentLoaded', () => {
             const newRow = tableBody.insertRow();
             for (const cellData of rowData) {
                 const newCell = newRow.insertCell();
-                if (cellData.type === 'images') {
+                if (cellData.type === 'mixed' && Array.isArray(cellData.segments)) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'cell-content-wrapper';
+                    for (const seg of cellData.segments) {
+                        if (seg.type === 'text') {
+                            const s = document.createElement('span');
+                            s.className = 'cell-text';
+                            s.textContent = seg.text != null ? seg.text : '';
+                            wrapper.appendChild(s);
+                        } else if (seg.type === 'img' && seg.src) {
+                            const img = document.createElement('img');
+                            img.src = seg.src;
+                            wrapper.appendChild(img);
+                        } else if (seg && seg.kind === 'generic' && seg.templateId) {
+                            const template = templateById.get(seg.templateId);
+                            if (template) {
+                                const payload = {
+                                    kind: 'generic',
+                                    templateId: seg.templateId,
+                                    values: seg.values || {},
+                                    displayName: seg.displayName || template.name,
+                                    customId: seg.customId,
+                                };
+                                try {
+                                    const el = await buildGenericSymbolElement(template, payload.values, payload);
+                                    el.removeAttribute('draggable');
+                                    wrapper.appendChild(el);
+                                } catch (err) {
+                                    console.error(err);
+                                }
+                            }
+                        }
+                    }
+                    newCell.appendChild(wrapper);
+                } else if (cellData.type === 'images') {
                     const wrapper = document.createElement('div');
                     wrapper.className = 'cell-content-wrapper';
                     for (const item of cellData.content) {
@@ -741,6 +877,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
                     }
+                    const cap = document.createElement('span');
+                    cap.className = 'cell-text';
+                    cap.textContent = cellData.caption != null ? cellData.caption : '';
+                    wrapper.appendChild(cap);
                     newCell.appendChild(wrapper);
                 } else {
                     newCell.textContent = cellData.content;

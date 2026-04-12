@@ -353,6 +353,37 @@ td {
     gap: 4px;
 }
 
+/* Shrink-to-fit so text can sit on one line with images; long text wraps within the cell */
+.cell-content-wrapper .cell-text {
+    display: inline-block;
+    width: max-content;
+    max-width: 100%;
+    min-height: 1.2em;
+    min-width: 0;
+    font-size: 0.88rem;
+    color: #333;
+    line-height: 1.35;
+    cursor: text;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+    box-sizing: border-box;
+}
+
+td .cell-content-wrapper input.cell-text-input {
+    width: auto;
+    min-width: 6ch;
+    max-width: 100%;
+    field-sizing: content;
+    box-sizing: border-box;
+    font: inherit;
+    font-size: 0.88rem;
+    padding: 2px 4px;
+    margin: 0;
+    flex: 0 1 auto;
+    vertical-align: middle;
+}
+
 th {
     background-color: #f2f2f2;
 }
