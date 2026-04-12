@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактор generic-шаблонів</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="banner" class="banner" hidden></div>
+    <div class="app">
+        <div class="panel">
+            <h1>Generic templates (image.json)</h1>
+            <p class="hint">Потрібен HTTP-сервер з кореня репо: <code>python -m start_server</code> або <code>python start_server.py</code> (для редактора: додайте <code>--generic</code>).</p>
+            <label class="row">
+                <span>Шаблон</span>
+                <select id="templateList" size="6"></select>
+            </label>
+            <div class="buttons">
+                <button type="button" id="btnNew">Новий шаблон</button>
+                <button type="button" id="btnDelete">Видалити</button>
+            </div>
+
+            <h2>Поле шаблону</h2>
+            <label class="row"><span>id</span><input type="text" id="fieldId" autocomplete="off"></label>
+            <label class="row"><span>name</span><input type="text" id="fieldName" autocomplete="off"></label>
+            <label class="row"><span>svg (шлях від static)</span><input type="text" id="fieldSvg" placeholder="images/generic/generic_rope.svg" autocomplete="off"></label>
+
+            <h2>Add-ups (макс. 3)</h2>
+            <div id="addUpsRoot"></div>
+            <div class="buttons">
+                <button type="button" id="btnAddUp">Додати add-up</button>
+                <button type="button" id="btnRemoveUp">Прибрати останній</button>
+            </div>
+
+            <div class="buttons">
+                <button type="button" class="primary" id="btnDownload">Завантажити image.json</button>
+            </div>
+            <p class="hint">Збережіть файл у <code>static/images/image.json</code> (замініть існуючий).</p>
+        </div>
+        <div class="preview-panel">
+            <h2>Перегляд (як у застосунку)</h2>
+            <div class="sample-values" id="sampleBox">
+                <h3>Приклад значень для перегляду</h3>
+                <p class="hint" style="margin-top:0">Значення зберігаються для кожного шаблону під час сесії вкладки (можна перемикати шаблони або оновити сторінку).</p>
+                <div id="sampleFields"></div>
+            </div>
+            <div class="preview-box" id="previewBox">
+                <span id="previewPlaceholder" style="color:#888;">Завантаження…</span>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

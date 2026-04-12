@@ -18,16 +18,152 @@ body {
     overflow-y: auto;
 }
 
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
 #sidebar h2 {
-    margin-top: 0;
+    margin: 0;
+    flex: 1;
+    font-size: 1.1rem;
+}
+
+.add-symbol-btn {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #333;
+}
+
+.add-symbol-btn:hover {
+    background: #eaeaea;
+}
+
+.sidebar-symbols {
+    display: grid;
+    /* 3 × 50px fits the padded sidebar width (180 − 30 padding) */
+    grid-template-columns: repeat(3, 50px);
+    justify-content: center;
+    gap: 8px 0;
+    align-items: start;
+    justify-items: center;
 }
 
 #sidebar img {
     width: 50px;
     height: 50px;
+    max-width: 100%;
     object-fit: cover;
     cursor: grab;
-    margin-bottom: 10px;
+    margin: 0;
+    display: block;
+}
+
+#sidebar .symbol-generic {
+    width: 50px;
+    height: 50px;
+    max-width: 100%;
+    margin: 0;
+    cursor: grab;
+    box-sizing: border-box;
+}
+
+#sidebar .symbol-generic svg {
+    width: 50px;
+    height: 50px;
+    display: block;
+}
+
+td .symbol-generic svg {
+    width: 50px;
+    height: 50px;
+    display: block;
+    vertical-align: top;
+}
+
+.add-symbol-modal__panel {
+    max-width: 420px;
+}
+
+.add-symbol-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.add-symbol-form__row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.9rem;
+}
+
+.add-symbol-form__row input,
+.add-symbol-form__row select {
+    padding: 8px;
+    font: inherit;
+    box-sizing: border-box;
+}
+
+.add-symbol-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.add-symbol-fields:empty {
+    display: none;
+}
+
+.add-symbol-form__row--checkbox {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.add-symbol-form__row--checkbox span {
+    flex: 1;
+}
+
+.add-symbol-form__row--checkbox input[type='checkbox'] {
+    width: auto;
+    height: 1.1rem;
+    flex-shrink: 0;
+}
+
+.add-symbol-form__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.add-symbol-form__actions button {
+    margin-top: 0;
+}
+
+.add-symbol-form__submit {
+    background: #2d6a4f;
+    color: #fff;
+    border: 1px solid #1b4332;
+}
+
+.add-symbol-form__cancel {
+    background: #f0f0f0;
 }
 
 /* Main logo is absolutely positioned; padding-top reserves space so title/table never sit under it */
@@ -215,6 +351,37 @@ td {
     flex-wrap: wrap;
     align-items: center;
     gap: 4px;
+}
+
+/* Shrink-to-fit so text can sit on one line with images; long text wraps within the cell */
+.cell-content-wrapper .cell-text {
+    display: inline-block;
+    width: max-content;
+    max-width: 100%;
+    min-height: 1.2em;
+    min-width: 0;
+    font-size: 0.88rem;
+    color: #333;
+    line-height: 1.35;
+    cursor: text;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+    box-sizing: border-box;
+}
+
+td .cell-content-wrapper input.cell-text-input {
+    width: auto;
+    min-width: 6ch;
+    max-width: 100%;
+    field-sizing: content;
+    box-sizing: border-box;
+    font: inherit;
+    font-size: 0.88rem;
+    padding: 2px 4px;
+    margin: 0;
+    flex: 0 1 auto;
+    vertical-align: middle;
 }
 
 th {
