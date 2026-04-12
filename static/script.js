@@ -1,10 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- CONFIGURATION ---
-    // Manually list your image files here.
-    // Due to browser security, we cannot automatically read files from a folder.
-    const imageJson = "images/image.json"
-    
-    const promiseJson = fetch(imageJson).then(response => response.json())
+    const imageJson = 'images/image.json';
+    const STORAGE_CUSTOM = 'tactics_custom_symbols_v1';
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+
+    const promiseJson = fetch(imageJson).then((r) => r.json());
     const table = document.getElementById('editableTable');
     const addRowBtn = document.getElementById('addRowBtn');
     const saveBtn = document.getElementById('saveBtn');
@@ -15,13 +14,200 @@ document.addEventListener('DOMContentLoaded', () => {
     const removeColBtn = document.getElementById('removeColBtn');
     const brushBtn = document.getElementById('brushBtn');
     const sidebar = document.getElementById('sidebar');
+    const sidebarSymbols = document.getElementById('sidebarSymbols');
     const controls = document.querySelector('.controls');
     const helpBtn = document.getElementById('helpBtn');
+    const addSymbolBtn = document.getElementById('addSymbolBtn');
+    const addSymbolModal = document.getElementById('addSymbolModal');
+    const addSymbolForm = document.getElementById('addSymbolForm');
+    const addSymbolTemplate = document.getElementById('addSymbolTemplate');
+    const addSymbolFields = document.getElementById('addSymbolFields');
+    const addSymbolDisplayName = document.getElementById('addSymbolDisplayName');
 
-    if (!table || !addRowBtn || !sidebar || !saveBtn || !openBtn || !fileInput || !exportBtn || !controls || !addColBtn || !removeColBtn || !brushBtn) {
-        console.error("Required element not found!");
+    if (!table || !addRowBtn || !sidebar || !sidebarSymbols || !saveBtn || !openBtn || !fileInput || !exportBtn || !controls || !addColBtn || !removeColBtn || !brushBtn) {
+        console.error('Required element not found!');
         return;
     }
+
+    /** @type {{ genericTemplates: object[], frames: object[] }} */
+    let manifest = { genericTemplates: [], frames: [] };
+    const templateById = new Map();
+    const templateSvgCache = new Map();
+
+    function normalizeManifest(raw) {
+        if (Array.isArray(raw)) {
+            return { frames: raw, genericTemplates: [] };
+        }
+        return {
+            frames: raw.frames || [],
+            genericTemplates: raw.genericTemplates || [],
+        };
+    }
+
+    function loadCustomSymbols() {
+        try {
+            const s = localStorage.getItem(STORAGE_CUSTOM);
+            if (!s) return [];
+            const parsed = JSON.parse(s);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+
+    function saveCustomSymbols(list) {
+        localStorage.setItem(STORAGE_CUSTOM, JSON.stringify(list));
+    }
+
+    function removeCustomSymbolFromStorage(customId) {
+        const list = loadCustomSymbols().filter((e) => e.customId !== customId);
+        saveCustomSymbols(list);
+    }
+
+    /**
+     * @param {HTMLElement} el
+     * @param {string} customId
+     */
+    function wireCustomSidebarDelete(el, customId, displayTitle) {
+        el.classList.add('symbol-custom');
+        el.dataset.customId = customId;
+        const baseTitle = displayTitle || '';
+        el.title = baseTitle ? `${baseTitle} — ПКМ: видалити зі списку` : 'ПКМ: видалити зі списку';
+        el.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (!confirm('Видалити цю власну позначку зі списку?')) return;
+            removeCustomSymbolFromStorage(customId);
+            el.remove();
+        });
+    }
+
+    async function getTemplateSvgString(svgPath) {
+        if (templateSvgCache.has(svgPath)) {
+            return templateSvgCache.get(svgPath);
+        }
+        const res = await fetch(svgPath);
+        const text = await res.text();
+        templateSvgCache.set(svgPath, text);
+        return text;
+    }
+
+    /**
+     * @param {object} template - genericTemplates[] entry
+     * @param {Record<string, string>} values - addUp id -> text
+     * @returns {Promise<HTMLElement>} div.symbol-generic
+     */
+    async function buildGenericSymbolElement(template, values, payload) {
+        const svgText = await getTemplateSvgString(template.svg);
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svgText, 'image/svg+xml');
+        const srcSvg = doc.documentElement;
+        if (srcSvg.querySelector('parsererror')) {
+            throw new Error('Invalid SVG template');
+        }
+        const svg = /** @type {SVGSVGElement} */ (document.importNode(srcSvg, true));
+
+        (template.addUps || []).forEach((addUp) => {
+            if (!addUp.svgText) return;
+            const raw = values[addUp.id];
+            let displayText = null;
+            if (addUp.control === 'checkbox') {
+                const letter = addUp.checkedText != null ? String(addUp.checkedText) : 'с';
+                const on =
+                    raw === '1' ||
+                    raw === true ||
+                    raw === 'true' ||
+                    (typeof raw === 'string' && raw.trim() === letter);
+                if (!on) return;
+                displayText = letter;
+            } else {
+                const v = (raw != null ? String(raw) : '').trim();
+                if (!v) return;
+                displayText = v;
+            }
+            const t = document.createElementNS(SVG_NS, 'text');
+            const st = addUp.svgText;
+            t.setAttribute('x', String(st.x));
+            t.setAttribute('y', String(st.y));
+            t.setAttribute('fill', '#000000');
+            t.setAttribute('font-family', 'system-ui, Segoe UI, sans-serif');
+            t.setAttribute('font-size', String(st.fontSize || 16));
+            if (st.textAnchor) {
+                t.setAttribute('text-anchor', st.textAnchor);
+            }
+            t.textContent = displayText;
+            svg.appendChild(t);
+        });
+
+        const wrap = document.createElement('div');
+        wrap.className = 'symbol-generic';
+        wrap.setAttribute('draggable', 'true');
+        wrap.setAttribute('data-symbol-json', JSON.stringify(payload));
+        wrap.appendChild(svg);
+        return wrap;
+    }
+
+    function wireGenericDrag(wrap, payload) {
+        const encoded = `tactics-generic:${encodeURIComponent(JSON.stringify(payload))}`;
+        wrap.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('application/x-tactics-symbol', JSON.stringify(payload));
+            e.dataTransfer.setData('text/plain', encoded);
+            e.dataTransfer.effectAllowed = 'copy';
+        });
+    }
+
+    function appendSidebarFrame(frame) {
+        const img = document.createElement('img');
+        img.src = frame.path;
+        img.draggable = true;
+        img.title = frame.name || '';
+        img.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', frame.path);
+            e.dataTransfer.setData('application/x-tactics-symbol', '');
+        });
+        sidebarSymbols.appendChild(img);
+    }
+
+    async function appendSidebarCustom(entry) {
+        const template = templateById.get(entry.templateId);
+        if (!template) return;
+        const payload = {
+            kind: 'generic',
+            templateId: entry.templateId,
+            values: entry.values || {},
+            displayName: entry.displayName || template.name,
+            customId: entry.customId,
+        };
+        const el = await buildGenericSymbolElement(template, entry.values || {}, payload);
+        const displayTitle = entry.displayName || template.name;
+        el.title = displayTitle;
+        wireGenericDrag(el, payload);
+        wireCustomSidebarDelete(el, entry.customId, displayTitle);
+        sidebarSymbols.appendChild(el);
+    }
+
+    async function fillSidebar() {
+        sidebarSymbols.innerHTML = '';
+        manifest.frames.forEach((frame) => appendSidebarFrame(frame));
+        const customs = loadCustomSymbols();
+        for (const c of customs) {
+            await appendSidebarCustom(c);
+        }
+    }
+
+    promiseJson.then((raw) => {
+        manifest = normalizeManifest(raw);
+        manifest.genericTemplates.forEach((t) => templateById.set(t.id, t));
+        fillSidebar();
+        if (addSymbolTemplate) {
+            addSymbolTemplate.innerHTML = '<option value="" disabled selected>Оберіть шаблон</option>';
+            manifest.genericTemplates.forEach((t) => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.name || t.id;
+                addSymbolTemplate.appendChild(opt);
+            });
+        }
+    });
 
     const helpModal = document.getElementById('helpModal');
     if (helpBtn && helpModal) {
@@ -42,41 +228,121 @@ document.addEventListener('DOMContentLoaded', () => {
         helpModal.querySelectorAll('[data-close-modal]').forEach((el) => {
             el.addEventListener('click', () => closeHelp());
         });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && !helpModal.hidden) {
-                closeHelp();
+    }
+
+    function openAddSymbolModal() {
+        if (!addSymbolModal) return;
+        addSymbolModal.removeAttribute('hidden');
+        addSymbolForm?.reset();
+        if (addSymbolTemplate) addSymbolTemplate.selectedIndex = 0;
+        if (addSymbolFields) addSymbolFields.innerHTML = '';
+        if (addSymbolDisplayName) addSymbolDisplayName.value = '';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeAddSymbolModal() {
+        if (!addSymbolModal) return;
+        addSymbolModal.setAttribute('hidden', '');
+        document.body.style.overflow = '';
+        addSymbolBtn?.focus();
+    }
+
+    function renderAddSymbolFields(templateId) {
+        if (!addSymbolFields) return;
+        addSymbolFields.innerHTML = '';
+        const template = templateById.get(templateId);
+        if (!template || !template.addUps) return;
+        template.addUps.slice(0, 3).forEach((addUp) => {
+            const row = document.createElement('label');
+            row.className = 'add-symbol-form__row';
+            if (addUp.control === 'checkbox') {
+                row.classList.add('add-symbol-form__row--checkbox');
             }
+            const span = document.createElement('span');
+            span.textContent = addUp.label || addUp.id;
+            row.appendChild(span);
+            if (addUp.control === 'checkbox') {
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.name = `addUp_${addUp.id}`;
+                input.dataset.addUpId = addUp.id;
+                input.title = addUp.label || '';
+                row.appendChild(input);
+            } else {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.name = `addUp_${addUp.id}`;
+                input.dataset.addUpId = addUp.id;
+                input.placeholder = addUp.placeholder || '';
+                input.autocomplete = 'off';
+                row.appendChild(input);
+            }
+            addSymbolFields.appendChild(row);
+        });
+    }
+
+    if (addSymbolBtn && addSymbolModal) {
+        addSymbolBtn.addEventListener('click', () => openAddSymbolModal());
+        addSymbolModal.querySelectorAll('[data-close-add-symbol]').forEach((el) => {
+            el.addEventListener('click', () => closeAddSymbolModal());
+        });
+        addSymbolTemplate?.addEventListener('change', () => {
+            renderAddSymbolFields(addSymbolTemplate.value);
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (addSymbolModal && !addSymbolModal.hidden) {
+            closeAddSymbolModal();
+            return;
+        }
+        if (helpModal && !helpModal.hidden) {
+            helpModal.setAttribute('hidden', '');
+            document.body.style.overflow = '';
+            helpBtn?.setAttribute('aria-expanded', 'false');
+            helpBtn?.focus();
+        }
+    });
+
+    if (addSymbolForm) {
+        addSymbolForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const templateId = addSymbolTemplate?.value;
+            if (!templateId) {
+                alert('Оберіть шаблон.');
+                return;
+            }
+            const template = templateById.get(templateId);
+            if (!template) return;
+            const values = {};
+            addSymbolFields?.querySelectorAll('[data-add-up-id]').forEach((input) => {
+                const id = input.dataset.addUpId;
+                if (!id) return;
+                if (input.type === 'checkbox') {
+                    values[id] = input.checked ? '1' : '';
+                } else {
+                    values[id] = input.value || '';
+                }
+            });
+            const displayName = (addSymbolDisplayName?.value || '').trim() || template.name || templateId;
+            const customId = `c_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+            const entry = { customId, templateId, values, displayName };
+            const list = loadCustomSymbols();
+            list.push(entry);
+            saveCustomSymbols(list);
+            await appendSidebarCustom(entry);
+            closeAddSymbolModal();
         });
     }
 
     let isBrushActive = false;
 
-    // --- Image Loading for Sidebar ---
-    promiseJson.then(frames => frames.forEach((frame, index) => { 
-        const img = document.createElement('img');
-        img.src = frame.path;
-        img.draggable = true;
-        img.title = frame.name;
-        img.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', frame.path);
-        });
-        sidebar.appendChild(img);
-    }));
-
-    const tableBody = table.querySelector('tbody');
-
-    if (!tableBody) {
-        console.error("Table body not found!");
-        return;
-    }
-
-    // --- Brush Functionality ---
     brushBtn.addEventListener('click', () => {
         isBrushActive = !isBrushActive;
         brushBtn.classList.toggle('brush-active');
     });
 
-    // Function to add a remove button to a row
     const addRemoveButton = (row) => {
         const newCell = row.insertCell();
         const removeBtn = document.createElement('button');
@@ -88,165 +354,175 @@ document.addEventListener('DOMContentLoaded', () => {
         newCell.appendChild(removeBtn);
     };
 
-    // --- Add remove buttons to initial rows ---
+    const tableBody = table.querySelector('tbody');
+    if (!tableBody) {
+        console.error('Table body not found!');
+        return;
+    }
+
     tableBody.querySelectorAll('tr').forEach(addRemoveButton);
 
-    // --- Drag and Drop Functionality ---
+    function parseDroppedSymbol(textPlain, appJson) {
+        if (appJson) {
+            try {
+                const p = JSON.parse(appJson);
+                if (p && p.kind === 'generic' && p.templateId) return p;
+            } catch {
+                /* ignore */
+            }
+        }
+        if (textPlain && textPlain.startsWith('tactics-generic:')) {
+            try {
+                const p = JSON.parse(decodeURIComponent(textPlain.slice('tactics-generic:'.length)));
+                if (p && p.kind === 'generic' && p.templateId) return p;
+            } catch {
+                /* ignore */
+            }
+        }
+        if (textPlain && textPlain.length) {
+            return { kind: 'path', path: textPlain };
+        }
+        return null;
+    }
+
     tableBody.addEventListener('dragover', (e) => {
-        e.preventDefault(); // Allow drop
+        e.preventDefault();
     });
 
-    tableBody.addEventListener('drop', (e) => {
+    tableBody.addEventListener('drop', async (e) => {
         e.preventDefault();
         let targetCell = e.target;
-
-        // Traverse up to find the parent TD
         while (targetCell && targetCell.tagName !== 'TD') {
             targetCell = targetCell.parentElement;
         }
+        if (!targetCell || targetCell.tagName !== 'TD') return;
 
-        if (targetCell && targetCell.tagName === 'TD') {
-            const imageUrl = e.dataTransfer.getData('text/plain');
-            if (imageUrl) {
-                let wrapper = targetCell.querySelector('.cell-content-wrapper');
+        const appJson = e.dataTransfer.getData('application/x-tactics-symbol');
+        const textPlain = e.dataTransfer.getData('text/plain');
+        const parsed = parseDroppedSymbol(textPlain, appJson);
+        if (!parsed) return;
 
-                // If wrapper doesn't exist, create it
-                if (!wrapper) {
-                    wrapper = document.createElement('div');
-                    wrapper.className = 'cell-content-wrapper';
-                    // Clear existing content (like text) and append the wrapper
-                    targetCell.innerHTML = '';
-                    targetCell.appendChild(wrapper);
-                }
+        let wrapper = targetCell.querySelector('.cell-content-wrapper');
+        if (!wrapper) {
+            wrapper = document.createElement('div');
+            wrapper.className = 'cell-content-wrapper';
+            targetCell.innerHTML = '';
+            targetCell.appendChild(wrapper);
+        }
 
-                const img = document.createElement('img');
-                img.src = imageUrl;
-                wrapper.appendChild(img); // Append image to wrapper
-            }
+        if (parsed.kind === 'path') {
+            const img = document.createElement('img');
+            img.src = parsed.path;
+            wrapper.appendChild(img);
+            return;
+        }
+
+        const template = templateById.get(parsed.templateId);
+        if (!template) return;
+        const payload = {
+            kind: 'generic',
+            templateId: parsed.templateId,
+            values: parsed.values || {},
+            displayName: parsed.displayName || template.name,
+            customId: parsed.customId,
+        };
+        try {
+            const el = await buildGenericSymbolElement(template, payload.values, payload);
+            el.removeAttribute('draggable');
+            wrapper.appendChild(el);
+        } catch (err) {
+            console.error(err);
+            alert('Не вдалося вставити позначку.');
         }
     });
 
-    // --- Right-click to delete image and remove paint ---
     tableBody.addEventListener('contextmenu', (e) => {
         let actionTaken = false;
-
-        // Check if the right-clicked element is an image
-        if (e.target.tagName === 'IMG') {
-            e.target.remove(); // Remove the image
+        const gen = e.target.closest && e.target.closest('.symbol-generic');
+        if (gen) {
+            gen.remove();
+            actionTaken = true;
+        } else if (e.target.tagName === 'IMG') {
+            e.target.remove();
             actionTaken = true;
         }
-
-        // Find the cell that was clicked in
         const cell = e.target.closest('td');
         if (cell) {
             const borders = ['painted-top', 'painted-right', 'painted-bottom', 'painted-left'];
-            // Check if any border is painted before removing them
-            if (borders.some(b => cell.classList.contains(b))) {
+            if (borders.some((b) => cell.classList.contains(b))) {
                 cell.classList.remove(...borders);
                 actionTaken = true;
             }
         }
-
-        // Prevent the browser's context menu only if an action was performed
-        if (actionTaken) {
-            e.preventDefault();
-        }
+        if (actionTaken) e.preventDefault();
     });
 
-    // Function to make cell editable
     const makeCellEditable = (cell) => {
         const originalContent = cell.textContent;
         const input = document.createElement('input');
         input.type = 'text';
         input.value = originalContent;
-
         cell.textContent = '';
         cell.appendChild(input);
         input.focus();
-
         const saveContent = () => {
             cell.textContent = input.value;
             input.remove();
         };
-
         input.addEventListener('blur', saveContent);
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                saveContent();
-            } else if (e.key === 'Escape') {
+        input.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter') saveContent();
+            else if (ev.key === 'Escape') {
                 cell.textContent = originalContent;
                 input.remove();
             }
         });
     };
 
-    // Event listener for clicks on table cells
     tableBody.addEventListener('click', (e) => {
         const target = e.target;
         if (target && target.tagName === 'TD' && !target.classList.contains('buttonRow')) {
-            // If brush is active, handle painting and stop further actions
             if (isBrushActive) {
                 const rect = target.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
-
-                const borderThreshold = 8; // How close to an edge to count as a click
-
+                const borderThreshold = 8;
                 const distances = {
                     top: y,
                     bottom: rect.height - y,
                     left: x,
-                    right: rect.width - x
+                    right: rect.width - x,
                 };
-
-                // Find the minimum distance to determine the clicked edge
-                const closestEdge = Object.keys(distances).reduce((a, b) => distances[a] < distances[b] ? a : b);
-
+                const closestEdge = Object.keys(distances).reduce((a, b) => (distances[a] < distances[b] ? a : b));
                 if (distances[closestEdge] <= borderThreshold) {
                     target.classList.toggle(`painted-${closestEdge}`);
                 }
                 return;
             }
-
-            // Prevent editing if cell contains an image
-            if (target.querySelector('img')) {
-                return;
-            }
-            // Check if the cell is not already being edited
-            if (!target.querySelector('input')) {
-                makeCellEditable(target);
-            }
+            if (target.querySelector('img') || target.querySelector('.symbol-generic')) return;
+            if (!target.querySelector('input')) makeCellEditable(target);
         }
     });
 
-    // Event listener for the "Add Row" button
     addRowBtn.addEventListener('click', () => {
         const newRow = tableBody.insertRow();
-        // Get column count from the header, minus "Actions"
         const columnCount = table.querySelector('thead tr').childElementCount - 1;
-
         for (let i = 0; i < columnCount; i++) {
             const newCell = newRow.insertCell();
-            newCell.textContent = '-'; // Default text
+            newCell.textContent = '-';
         }
         addRemoveButton(newRow);
     });
 
-    // --- Add/Remove Column Functionality ---
     addColBtn.addEventListener('click', () => {
         const headerRow = table.querySelector('thead tr');
         const headerCells = headerRow.querySelectorAll('th');
-        // Get the second to last header (the last numbered one)
         const lastHeader = headerCells[headerCells.length - 2];
         const newColNumber = parseInt(lastHeader.textContent, 10) + 1;
-
-        // Add new header cell
         const newHeader = document.createElement('th');
         newHeader.textContent = newColNumber;
         headerRow.insertBefore(newHeader, headerRow.lastElementChild);
-
-        // Add new cell to each body row
-        tableBody.querySelectorAll('tr').forEach(row => {
+        tableBody.querySelectorAll('tr').forEach((row) => {
             const newCell = row.insertCell(row.cells.length - 1);
             newCell.textContent = '-';
         });
@@ -255,30 +531,31 @@ document.addEventListener('DOMContentLoaded', () => {
     removeColBtn.addEventListener('click', () => {
         const headerRow = table.querySelector('thead tr');
         const headerCells = headerRow.querySelectorAll('th');
-
-        // Prevent removing the last data column
         if (headerCells.length <= 2) {
-            alert("Cannot remove the last column.");
+            alert('Cannot remove the last column.');
             return;
         }
-
-        // Remove the second to last header cell
         headerCells[headerCells.length - 2].remove();
-
-        // Remove the corresponding cell from each body row
-        tableBody.querySelectorAll('tr').forEach(row => {
+        tableBody.querySelectorAll('tr').forEach((row) => {
             row.deleteCell(row.cells.length - 2);
         });
     });
 
-    // --- Export as PNG ---
-    exportBtn.addEventListener('click', async () => {
-        const elementsToHide = [sidebar, controls, helpBtn].filter(Boolean);
-        const actionsColumnCells = table.querySelectorAll('tr > :last-child');
-        const tableImages = tableBody.querySelectorAll('img');
-        const originalSrcs = new Map();
+    function collectVisualExportNodes() {
+        return tableBody.querySelectorAll('.cell-content-wrapper img, .cell-content-wrapper .symbol-generic svg');
+    }
 
-        // Helper function to convert image src to a data URL
+    function svgToDataUrl(svg) {
+        const s = new XMLSerializer().serializeToString(svg);
+        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(s)}`;
+    }
+
+    exportBtn.addEventListener('click', async () => {
+        const elementsToHide = [sidebar, controls, helpBtn, addSymbolBtn].filter(Boolean);
+        const actionsColumnCells = table.querySelectorAll('tr > :last-child');
+        const visuals = collectVisualExportNodes();
+        const originalSrc = new Map();
+
         const toDataURL = async (img) => {
             const response = await fetch(img.src);
             const blob = await response.blob();
@@ -290,17 +567,26 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        // Hide elements
-        elementsToHide.forEach(el => el.classList.add('export-hidden'));
-        actionsColumnCells.forEach(cell => cell.classList.add('export-hidden'));
+        elementsToHide.forEach((el) => el.classList.add('export-hidden'));
+        actionsColumnCells.forEach((cell) => cell.classList.add('export-hidden'));
 
         try {
-            // Temporarily replace image sources with data URLs
-            await Promise.all(Array.from(tableImages).map(async (img) => {
-                originalSrcs.set(img, img.src); // Save original src
-                const dataUrl = await toDataURL(img);
-                img.src = dataUrl;
-            }));
+            for (const el of visuals) {
+                if (el.tagName === 'IMG') {
+                    originalSrc.set(el, el.src);
+                    const dataUrl = await toDataURL(el);
+                    el.src = dataUrl;
+                } else if (el.tagName === 'svg' || el.namespaceURI?.includes('svg')) {
+                    const img = document.createElement('img');
+                    img.width = el.getBoundingClientRect().width || 50;
+                    img.height = el.getBoundingClientRect().height || 50;
+                    img.src = svgToDataUrl(el);
+                    img.className = 'export-svg-raster';
+                    el.parentNode.insertBefore(img, el);
+                    el.classList.add('export-hidden');
+                    originalSrc.set(el, { mode: 'svg', img });
+                }
+            }
 
             const canvas = await html2canvas(document.getElementById('main-content'));
             const a = document.createElement('a');
@@ -310,66 +596,69 @@ document.addEventListener('DOMContentLoaded', () => {
             a.click();
             document.body.removeChild(a);
         } catch (error) {
-            console.error("Error exporting table:", error);
-            alert("Sorry, there was an error exporting the table.");
+            console.error('Error exporting table:', error);
+            alert('Sorry, there was an error exporting the table.');
         } finally {
-            // Restore original image sources
-            tableImages.forEach(img => {
-                if (originalSrcs.has(img)) {
-                    img.src = originalSrcs.get(img);
+            visuals.forEach((el) => {
+                if (el.tagName === 'IMG' && originalSrc.has(el)) {
+                    el.src = originalSrc.get(el);
+                } else if (originalSrc.has(el)) {
+                    const rec = originalSrc.get(el);
+                    if (rec && rec.mode === 'svg' && rec.img) {
+                        rec.img.remove();
+                        el.classList.remove('export-hidden');
+                    }
                 }
             });
-            // Unhide elements
-            elementsToHide.forEach(el => el.classList.remove('export-hidden'));
-            actionsColumnCells.forEach(cell => cell.classList.remove('export-hidden'));
+            elementsToHide.forEach((el) => el.classList.remove('export-hidden'));
+            actionsColumnCells.forEach((cell) => cell.classList.remove('export-hidden'));
         }
     });
 
-
-    // --- Save and Open Functionality ---
-
-    // Save Table Data
     saveBtn.addEventListener('click', () => {
         const tableData = [];
         const rows = tableBody.querySelectorAll('tr');
-
-        rows.forEach(row => {
+        rows.forEach((row) => {
             const rowData = [];
             const cells = row.querySelectorAll('td');
-            // Iterate over cells, excluding the last one (actions column)
             for (let i = 0; i < cells.length - 1; i++) {
                 const cell = cells[i];
-                const images = cell.querySelectorAll('img');
-
-                // Save which borders are painted
                 const paintedBorders = {
                     top: cell.classList.contains('painted-top'),
                     right: cell.classList.contains('painted-right'),
                     bottom: cell.classList.contains('painted-bottom'),
-                    left: cell.classList.contains('painted-left')
+                    left: cell.classList.contains('painted-left'),
                 };
-
-                if (images.length > 0) {
-                    // Convert the full image URL to a relative path for saving
-                    const imageUrls = Array.from(images).map(img => {
-                        try {
-                            // Create a URL object to easily access the path
-                            const url = new URL(img.src);
-                            // Return the path, removing the leading '/'
-                            return url.pathname.substring(1);
-                        } catch (e) {
-                            // Fallback for cases where URL parsing might fail
-                            return img.getAttribute('src');
+                const wrapper = cell.querySelector('.cell-content-wrapper');
+                if (wrapper) {
+                    const bits = [];
+                    wrapper.querySelectorAll('img, .symbol-generic').forEach((node) => {
+                        if (node.tagName === 'IMG') {
+                            try {
+                                const url = new URL(node.src);
+                                bits.push(url.pathname.substring(1));
+                            } catch {
+                                bits.push(node.getAttribute('src'));
+                            }
+                        } else if (node.classList.contains('symbol-generic')) {
+                            try {
+                                bits.push(JSON.parse(node.getAttribute('data-symbol-json') || '{}'));
+                            } catch {
+                                bits.push({ kind: 'generic', error: true });
+                            }
                         }
                     });
-                    rowData.push({ type: 'images', content: imageUrls, paintedBorders: paintedBorders });
+                    if (bits.length) {
+                        rowData.push({ type: 'images', content: bits, paintedBorders });
+                    } else {
+                        rowData.push({ type: 'text', content: cell.textContent, paintedBorders });
+                    }
                 } else {
-                    rowData.push({ type: 'text', content: cell.textContent, paintedBorders: paintedBorders });
+                    rowData.push({ type: 'text', content: cell.textContent, paintedBorders });
                 }
             }
             tableData.push(rowData);
         });
-
         const jsonData = JSON.stringify(tableData, null, 2);
         const blob = new Blob([jsonData], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -382,86 +671,88 @@ document.addEventListener('DOMContentLoaded', () => {
         URL.revokeObjectURL(url);
     });
 
-    // Trigger File Input
     openBtn.addEventListener('click', () => {
         fileInput.click();
     });
 
-    // Read and Load File
     fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
-        if (!file) {
-            return;
-        }
-
+        if (!file) return;
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
                 const data = JSON.parse(event.target.result);
-                rebuildTable(data);
+                rebuildTable(data).catch((err) => console.error(err));
             } catch (error) {
-                console.error("Error parsing JSON file:", error);
-                alert("Invalid JSON file.");
+                console.error('Error parsing JSON file:', error);
+                alert('Invalid JSON file.');
             }
         };
         reader.readAsText(file);
-
-        // Reset file input to allow opening the same file again
         fileInput.value = '';
     });
 
-    // Rebuild Table from Data
-    const rebuildTable = (data) => {
+    const rebuildTable = async (data) => {
         const tableHead = table.querySelector('thead');
-
-        // Clear existing table
         tableHead.innerHTML = '';
         tableBody.innerHTML = '';
+        if (data.length === 0) return;
 
-        if (data.length === 0) {
-            return; // Don't rebuild if there's no data
-        }
-
-        // --- Rebuild Header ---
         const headerRow = tableHead.insertRow();
-        const columnCount = data[0].length; // Get column count from first row of data
+        const columnCount = data[0].length;
         for (let i = 0; i < columnCount; i++) {
             const newHeader = document.createElement('th');
             newHeader.textContent = i + 1;
             headerRow.appendChild(newHeader);
         }
-        // Add "Actions" header
         const actionsHeader = document.createElement('th');
-        actionsHeader.textContent = 'Actions';
+        actionsHeader.textContent = 'Дія';
         headerRow.appendChild(actionsHeader);
 
-        // --- Rebuild Body ---
-        data.forEach(rowData => {
+        for (const rowData of data) {
             const newRow = tableBody.insertRow();
-            rowData.forEach(cellData => {
+            for (const cellData of rowData) {
                 const newCell = newRow.insertCell();
                 if (cellData.type === 'images') {
                     const wrapper = document.createElement('div');
                     wrapper.className = 'cell-content-wrapper';
-                    cellData.content.forEach(imageUrl => {
-                        const img = document.createElement('img');
-                        // Loaded imageUrl is relative, browser handles the rest
-                        img.src = imageUrl;
-                        wrapper.appendChild(img);
-                    });
+                    for (const item of cellData.content) {
+                        if (typeof item === 'string') {
+                            const img = document.createElement('img');
+                            img.src = item;
+                            wrapper.appendChild(img);
+                        } else if (item && item.kind === 'generic' && item.templateId) {
+                            const template = templateById.get(item.templateId);
+                            if (template) {
+                                const payload = {
+                                    kind: 'generic',
+                                    templateId: item.templateId,
+                                    values: item.values || {},
+                                    displayName: item.displayName || template.name,
+                                    customId: item.customId,
+                                };
+                                try {
+                                    const el = await buildGenericSymbolElement(template, payload.values, payload);
+                                    el.removeAttribute('draggable');
+                                    wrapper.appendChild(el);
+                                } catch (err) {
+                                    console.error(err);
+                                }
+                            }
+                        }
+                    }
                     newCell.appendChild(wrapper);
                 } else {
                     newCell.textContent = cellData.content;
                 }
-                // Restore painted state
                 if (cellData.paintedBorders) {
                     if (cellData.paintedBorders.top) newCell.classList.add('painted-top');
                     if (cellData.paintedBorders.right) newCell.classList.add('painted-right');
                     if (cellData.paintedBorders.bottom) newCell.classList.add('painted-bottom');
                     if (cellData.paintedBorders.left) newCell.classList.add('painted-left');
                 }
-            });
+            }
             addRemoveButton(newRow);
-        });
+        }
     };
 });

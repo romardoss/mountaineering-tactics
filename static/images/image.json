@@ -1,4 +1,52 @@
-[
+{
+    "genericTemplates": [
+        {
+            "id": "rope",
+            "svg": "images/generic/generic_rope.svg",
+            "name": "Мотузка",
+            "addUps": [
+                {
+                    "id": "meters",
+                    "label": "Довжина (м)",
+                    "placeholder": "40",
+                    "svgText": { "x": 192, "y": 175, "fontSize": 64, "textAnchor": "middle" }
+                },
+                {
+                    "id": "note",
+                    "label": "Додатковий текст",
+                    "placeholder": "",
+                    "svgText": { "x": 100, "y": 225, "fontSize": 48, "textAnchor": "middle" }
+                },
+                {
+                    "id": "referee",
+                    "label": "Суддівська?",
+                    "control": "checkbox",
+                    "checkedText": "с",
+                    "svgText": { "x": 180, "y": 100, "fontSize": 64, "textAnchor": "start" }
+                }
+            ]
+        },
+        {
+            "id": "helping_rope",
+            "svg": "images/generic/generic_helping_rope.svg",
+            "name": "Мотузка допоміжна",
+            "addUps": [
+                {
+                    "id": "meters",
+                    "label": "Довжина (м)",
+                    "placeholder": "40",
+                    "svgText": { "x": 170, "y": 120, "fontSize": 64, "textAnchor": "middle" }
+                },
+                {
+                    "id": "note",
+                    "label": "Додатковий текст",
+                    "placeholder": "",
+                    "svgText": { "x": 170, "y": 280, "fontSize": 48, "textAnchor": "start" }
+                }
+            ]
+        }
+    ],
+    "frames": [
     {
         "path": "images/Frame 1.svg",
         "name": "проходження етапу"
@@ -9,7 +57,7 @@
     },
     {
         "path": "images/Frame 3.svg",
-        "name": "закріпити мотузку"
+        "name": "закріпити"
     },
     {
         "path": "images/Frame 4.svg",
@@ -17,15 +65,15 @@
     },
     {
         "path": "images/Frame 5.svg",
-        "name": "здійснювати контроль мотузки"
+        "name": "здійснювати контроль"
     },
     {
         "path": "images/Frame 6.svg",
-        "name": "видавати мотузку"
+        "name": "видавати"
     },
     {
         "path": "images/Frame 7.svg",
-        "name": "вибирати мотузку"
+        "name": "вибирати"
     },
     {
         "path": "images/Frame 8.svg",
@@ -92,38 +140,6 @@
         "name": "учасник #6"
     },
     {
-        "path":"images/Frame 24.svg",
-        "name": "мотузка основна #1"
-    },
-    {
-        "path":"images/Frame 25.svg",
-        "name": "мотузка основна #2"
-    },
-    {
-        "path":"images/Frame 26.svg",
-        "name": "мотузка основна #3"
-    },
-    {
-        "path":"images/Frame 27.svg",
-        "name": "мотузка основна #4"
-    },
-    {
-        "path":"images/Frame 28.svg",
-        "name": "мотузка допоміжна #1"
-    },
-    {
-        "path":"images/Frame 29.svg",
-        "name": "мотузка допоміжна #2"
-    },
-    {
-        "path":"images/Frame 30.svg",
-        "name": "мотузка допоміжна #3"
-    },
-    {
-        "path":"images/Frame 31.svg",
-        "name": "мотузка допоміжна #4"
-    },
-    {
         "path":"images/Frame 32.svg",
         "name": "опора"
     },
@@ -176,22 +192,6 @@
         "name": "пристрій для здьоргу мотузки"
     },
     {
-        "path":"images/Frame 45.svg",
-        "name": "мотузка страхувальна суддівська #1"
-    },
-    {
-        "path":"images/Frame 46.svg",
-        "name": "мотузка страхувальна суддівська #2"
-    },
-    {
-        "path":"images/Frame 47.svg",
-        "name": "мотузка страхувальна суддівська #3"
-    },
-    {
-        "path": "images/Frame 48.svg",
-        "name": "мотузка страхувальна суддівська #4"
-    },
-    {
         "path": "images/Frame 49.svg",
         "name": "мотузка страхувальна суддівська"
     },
@@ -204,39 +204,8 @@
         "name": "мотузка основна, перильна"
     },
     {
-        "path": "images/Frame 52.svg",
-        "name": "мотузка основна, перильна #1"
-    },
-    {
-        "path": "images/Frame 53.svg",
-        "name": "мотузка основна, перильна #2"
-    },
-    {
-        "path": "images/Frame 54.svg",
-        "name": "мотузка основна, перильна #3"
-    },
-    {
-        "path": "images/Frame 55.svg",
-        "name": "мотузка основна, перильна #4"
-    },
-    {
         "path": "images/Frame 56.svg",
         "name": "мотузка основна, перильна, суддівська"
-    },
-    {
-        "path": "images/Frame 57.svg",
-        "name": "мотузка основна, перильна, суддівська #1"
-    },
-    {
-        "path": "images/Frame 58.svg",
-        "name": "мотузка основна, перильна, суддівська #2"
-    },
-    {
-        "path": "images/Frame 59.svg",
-        "name": "мотузка основна, перильна, суддівська #3"
-    },
-    {
-        "path": "images/Frame 60.svg",
-        "name": "мотузка основна, перильна, суддівська #4"
     }
-]
+    ]
+}

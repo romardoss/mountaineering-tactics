@@ -10,8 +10,11 @@
 <body>
     <div class="container">
         <div id="sidebar">
-            <h2>Позначки</h2>
-            <!-- Images will be loaded here -->
+            <div class="sidebar-header">
+                <h2>Позначки</h2>
+                <button type="button" id="addSymbolBtn" class="add-symbol-btn" title="Додати власну позначку" aria-label="Додати позначку">+</button>
+            </div>
+            <div class="sidebar-symbols" id="sidebarSymbols"></div>
         </div>
         <div id="main-content">
             <img id="icon" src="images/logo.svg" alt="">
@@ -52,6 +55,31 @@
         </div>
     </div>
 
+    <div id="addSymbolModal" class="help-modal" hidden role="dialog" aria-modal="true" aria-labelledby="addSymbolModalTitle">
+        <div class="help-modal__backdrop" data-close-add-symbol tabindex="-1" aria-hidden="true"></div>
+        <div class="help-modal__panel add-symbol-modal__panel">
+            <button type="button" class="help-modal__close" data-close-add-symbol aria-label="Закрити">&times;</button>
+            <h2 id="addSymbolModalTitle">Нова позначка</h2>
+            <form id="addSymbolForm" class="add-symbol-form">
+                <label class="add-symbol-form__row">
+                    <span>Шаблон</span>
+                    <select id="addSymbolTemplate" name="template" required>
+                        <option value="" disabled selected>Оберіть шаблон</option>
+                    </select>
+                </label>
+                <div id="addSymbolFields" class="add-symbol-fields"></div>
+                <label class="add-symbol-form__row">
+                    <span>Назва (підказка)</span>
+                    <input type="text" id="addSymbolDisplayName" name="displayName" placeholder="Напр. мотузка 40м" autocomplete="off">
+                </label>
+                <div class="add-symbol-form__actions">
+                    <button type="submit" class="add-symbol-form__submit">Додати</button>
+                    <button type="button" class="add-symbol-form__cancel" data-close-add-symbol>Скасувати</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="helpModal" class="help-modal" hidden role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
         <div class="help-modal__backdrop" data-close-modal tabindex="-1" aria-hidden="true"></div>
         <div class="help-modal__panel">
@@ -60,6 +88,7 @@
             <div class="help-modal__body">
                 <ul>
                     <li>Перетягніть позначки зліва в клітинки таблиці.</li>
+                    <li>Власні позначки (після <strong>+</strong>): <strong>правий клік</strong> по іконці в списку — прибрати її зі списку (у клітинках таблиці вже вставлені зображення не зникають).</li>
                     <li>Клацніть по клітинці, щоб змінити текст; правий клік по зображенню в клітинці — видалити його.</li>
                     <li><strong>Пензель</strong>: клацніть по краю клітинки, щоб намалювати або прибрати кольорову лінію.</li>
                     <li><strong>Додати / видалити учасника</strong> — змінює кількість колонок; <strong>Додати часову стадію</strong> — новий рядок.</li>
