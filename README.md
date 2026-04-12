@@ -1,5 +1,15 @@
 # Тактика проходження (mountaineering tactics)
 
+Prod web version is by the link:
+https://mountaineering-tactics-e0i.pages.dev/
+
+YouTube tutorials:
+1. https://youtu.be/xjq_BIWG_mQ
+2. https://youtu.be/twp5ZQn7TEs
+
+If any suggestions, write them here https://docs.google.com/document/d/1x-UwBtVQTPDgQ9rpQW5t13jk7ALCZZuHRYcSSdy_0C4/edit?usp=sharing
+or ask a dev
+
 **Version 2.0** — static web app for building tactic tables: drag symbols from the sidebar, place **frames** and **generic SVG** symbols in cells, add **interleaved text**, paint cell edges, save/load JSON (including **mixed** cell format), export PNG. UI is Ukrainian.
 
 For changes since the pre–generic-images **`master`** baseline, see **[whats_new.md](whats_new.md)**.
