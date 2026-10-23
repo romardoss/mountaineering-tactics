@@ -451,7 +451,7 @@
             })
             .catch((e) => {
                 showBanner(
-                    'Не вдалося завантажити image.json. Запустіть з кореня репо: python -m start_server (або python start_server.py) і відкрийте /tools/generic-template-editor/ (порт може бути не 8000).',
+                    'Не вдалося завантажити image.json. Запустіть з кореня репо: npm start (або npm run generic) і відкрийте /tools/generic-template-editor/ (порт може бути не 8000).',
                     true
                 );
                 if (previewPlaceholder) {

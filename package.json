@@ -1,0 +1,14 @@
+{
+  "name": "tactics",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Тактика проходження — static web app for building mountaineering tactic tables",
+  "type": "module",
+  "scripts": {
+    "start": "node start_server.js",
+    "generic": "node start_server.js --generic"
+  },
+  "engines": {
+    "node": ">=18.3"
+  }
+}
