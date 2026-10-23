@@ -1,4 +1,6 @@
-<svg width="300" height="300" viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M60 150L85 164.434V135.566L60 150ZM240 150L215 135.566V164.434L240 150ZM82.5 150V152.5L217.5 152.5V150V147.5L82.5 147.5V150Z" fill="black"/>
-<line x1="147.5" y1="272.5" x2="147.5" y2="27.5" stroke="black" stroke-width="5" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300" fill="none" stroke="#111111" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+<line x1="150" y1="28" x2="150" y2="272"/>
+<line x1="90" y1="150" x2="210" y2="150"/>
+<polygon points="58.0,150.0 100.0,128.0 100.0,172.0" fill="#111111" stroke-width="6"/>
+<polygon points="242.0,150.0 200.0,172.0 200.0,128.0" fill="#111111" stroke-width="6"/>
 </svg>

@@ -158,8 +158,15 @@
             t.setAttribute('x', String(st.x));
             t.setAttribute('y', String(st.y));
             t.setAttribute('fill', '#000000');
-            t.setAttribute('font-family', 'system-ui, Segoe UI, sans-serif');
+            // Same face as the letters inside the symbols; explicit regular weight (never bold)
+            t.setAttribute('font-family', "Arial, Helvetica, 'Liberation Sans', sans-serif");
+            t.setAttribute('font-weight', 'normal');
             t.setAttribute('font-size', String(st.fontSize || 16));
+            // White halo keeps the text readable where it crosses the symbol's lines
+            t.setAttribute('stroke', '#ffffff');
+            t.setAttribute('stroke-width', String(Math.max(2, (st.fontSize || 16) * 0.16)));
+            t.setAttribute('stroke-linejoin', 'round');
+            t.setAttribute('paint-order', 'stroke');
             if (st.textAnchor) {
                 t.setAttribute('text-anchor', st.textAnchor);
             }

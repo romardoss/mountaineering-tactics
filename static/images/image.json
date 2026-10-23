@@ -44,6 +44,32 @@
                     "svgText": { "x": 170, "y": 280, "fontSize": 48, "textAnchor": "start" }
                 }
             ]
+        },
+        {
+            "id": "rail_rope",
+            "svg": "images/generic/generic_rail_rope.svg",
+            "name": "Мотузка основна, перильна",
+            "addUps": [
+                {
+                    "id": "meters",
+                    "label": "Довжина (м)",
+                    "placeholder": "40",
+                    "svgText": { "x": 192, "y": 205, "fontSize": 64, "textAnchor": "middle" }
+                },
+                {
+                    "id": "note",
+                    "label": "Додатковий текст",
+                    "placeholder": "",
+                    "svgText": { "x": 87, "y": 250, "fontSize": 48, "textAnchor": "middle" }
+                },
+                {
+                    "id": "referee",
+                    "label": "Суддівська?",
+                    "control": "checkbox",
+                    "checkedText": "с",
+                    "svgText": { "x": 192, "y": 95, "fontSize": 72, "textAnchor": "middle" }
+                }
+            ]
         }
     ],
     "frames": [
@@ -117,27 +143,33 @@
     },
     {
         "path":"images/Frame 18.svg",
-        "name": "учасник #1"
+        "name": "учасник #1",
+        "group": "учасник"
     },
     {
         "path":"images/Frame 19.svg",
-        "name": "учасник #2"
+        "name": "учасник #2",
+        "group": "учасник"
     },
     {
         "path":"images/Frame 20.svg",
-        "name": "учасник #3"
+        "name": "учасник #3",
+        "group": "учасник"
     },
     {
         "path":"images/Frame 21.svg",
-        "name": "учасник #4"
+        "name": "учасник #4",
+        "group": "учасник"
     },
     {
         "path":"images/Frame 22.svg",
-        "name": "учасник #5"
+        "name": "учасник #5",
+        "group": "учасник"
     },
     {
         "path":"images/Frame 23.svg",
-        "name": "учасник #6"
+        "name": "учасник #6",
+        "group": "учасник"
     },
     {
         "path":"images/Frame 32.svg",
@@ -149,35 +181,43 @@
     },
     {
         "path":"images/Frame 34.svg",
-        "name": "петля з проміжним карабіном"
+        "name": "петля з проміжним карабіном",
+        "group": "петля"
     },
     {
         "path":"images/Frame 35.svg",
-        "name": "петля з проміжним карабіном, суддівська"
+        "name": "петля з проміжним карабіном, суддівська",
+        "group": "петля"
     },
     {
         "path":"images/Frame 36.svg",
-        "name": "петля без карабіну"
+        "name": "петля без карабіну",
+        "group": "петля"
     },
     {
         "path":"images/Frame 37.svg",
-        "name": "петля без карабіну, суддівська"
+        "name": "петля без карабіну, суддівська",
+        "group": "петля"
     },
     {
         "path":"images/Frame 38.svg",
-        "name": "перила"
+        "name": "перила",
+        "group": "перила"
     },
     {
         "path":"images/Frame 39.svg",
-        "name": "перила суддівські"
+        "name": "перила суддівські",
+        "group": "перила"
     },
     {
         "path":"images/Frame 40.svg",
-        "name": "вантажні перила"
+        "name": "вантажні перила",
+        "group": "перила"
     },
     {
         "path":"images/Frame 41.svg",
-        "name": "вантажні перила суддівські"
+        "name": "вантажні перила суддівські",
+        "group": "перила"
     },
     {
         "path":"images/Frame 42.svg",
@@ -198,14 +238,6 @@
     {
         "path": "images/Frame 50.svg",
         "name": "ноші"
-    },
-    {
-        "path": "images/Frame 51.svg",
-        "name": "мотузка основна, перильна"
-    },
-    {
-        "path": "images/Frame 56.svg",
-        "name": "мотузка основна, перильна, суддівська"
     }
     ]
 }

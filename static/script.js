@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const addSymbolTemplate = document.getElementById('addSymbolTemplate');
     const addSymbolFields = document.getElementById('addSymbolFields');
     const addSymbolDisplayName = document.getElementById('addSymbolDisplayName');
+    const addSymbolTemplateGrid = document.getElementById('addSymbolTemplateGrid');
+    const addSymbolEditor = document.getElementById('addSymbolEditor');
+    const addSymbolPreview = document.getElementById('addSymbolPreview');
 
     if (!table || !addRowBtn || !sidebar || !sidebarSymbols || !saveBtn || !openBtn || !fileInput || !exportBtn || !controls || !addColBtn || !removeColBtn || !brushBtn) {
         console.error('Required element not found!');
@@ -75,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         el.title = baseTitle ? `${baseTitle} — ПКМ: видалити зі списку` : 'ПКМ: видалити зі списку';
         el.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-            if (!confirm('Видалити цю власну позначку зі списку?')) return;
+            if (!confirm('Видалити цю мотузку зі списку?')) return;
             removeCustomSymbolFromStorage(customId);
             el.remove();
         });
@@ -129,8 +132,15 @@ document.addEventListener('DOMContentLoaded', () => {
             t.setAttribute('x', String(st.x));
             t.setAttribute('y', String(st.y));
             t.setAttribute('fill', '#000000');
-            t.setAttribute('font-family', 'system-ui, Segoe UI, sans-serif');
+            // Same face as the letters inside the symbols; explicit regular weight (never bold)
+            t.setAttribute('font-family', "Arial, Helvetica, 'Liberation Sans', sans-serif");
+            t.setAttribute('font-weight', 'normal');
             t.setAttribute('font-size', String(st.fontSize || 16));
+            // White halo keeps the text readable where it crosses the symbol's lines
+            t.setAttribute('stroke', '#ffffff');
+            t.setAttribute('stroke-width', String(Math.max(2, (st.fontSize || 16) * 0.16)));
+            t.setAttribute('stroke-linejoin', 'round');
+            t.setAttribute('paint-order', 'stroke');
             if (st.textAnchor) {
                 t.setAttribute('text-anchor', st.textAnchor);
             }
@@ -155,16 +165,151 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    /** Drag payload for a frame symbol (the table stores frames by image path). */
+    function setFrameDragData(e, path) {
+        e.dataTransfer.setData('text/plain', path);
+        e.dataTransfer.setData('application/x-tactics-symbol', '');
+        e.dataTransfer.effectAllowed = 'copy';
+    }
+
     function appendSidebarFrame(frame) {
         const img = document.createElement('img');
         img.src = frame.path;
         img.draggable = true;
         img.title = frame.name || '';
-        img.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', frame.path);
-            e.dataTransfer.setData('application/x-tactics-symbol', '');
-        });
+        img.addEventListener('dragstart', (e) => setFrameDragData(e, frame.path));
         sidebarSymbols.appendChild(img);
+    }
+
+    // ---------- Frame groups: several numbered frames shown as one sidebar tile ----------
+    // Hovering the tile shows a picker above it; each option is clickable (sets the tile's
+    // current frame) and draggable (drops that frame directly). Drops use the frame paths,
+    // so saved tables are unchanged.
+    const groupPopover = document.createElement('div');
+    groupPopover.className = 'symbol-group-popover';
+    groupPopover.setAttribute('role', 'group');
+    groupPopover.hidden = true;
+    document.body.appendChild(groupPopover);
+    let groupPopoverTile = null;
+    let groupPopoverHideTimer = 0;
+
+    function hideGroupPopover() {
+        clearTimeout(groupPopoverHideTimer);
+        groupPopover.hidden = true;
+        groupPopoverTile = null;
+    }
+
+    function scheduleHideGroupPopover() {
+        clearTimeout(groupPopoverHideTimer);
+        groupPopoverHideTimer = setTimeout(hideGroupPopover, 200);
+    }
+
+    groupPopover.addEventListener('mouseenter', () => clearTimeout(groupPopoverHideTimer));
+    groupPopover.addEventListener('mouseleave', scheduleHideGroupPopover);
+    sidebar.addEventListener('scroll', hideGroupPopover);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !groupPopover.hidden) {
+            const tile = groupPopoverTile;
+            hideGroupPopover();
+            tile?.focus();
+        }
+    });
+
+    /**
+     * @param {HTMLElement} tile
+     * @param {{ name: string, frames: object[], getCurrent: () => object, setCurrent: (f: object) => void }} group
+     */
+    function showGroupPopover(tile, group) {
+        clearTimeout(groupPopoverHideTimer);
+        if (groupPopoverTile === tile && !groupPopover.hidden) return;
+        groupPopoverTile = tile;
+        groupPopover.setAttribute('aria-label', group.name);
+        const options = group.frames.map((frame, i) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'symbol-group-option';
+            btn.draggable = true;
+            btn.title = frame.name || '';
+            btn.setAttribute('aria-pressed', String(frame === group.getCurrent()));
+            const img = document.createElement('img');
+            img.src = frame.path;
+            img.alt = String(i + 1);
+            img.draggable = false;
+            btn.appendChild(img);
+            btn.addEventListener('click', () => {
+                group.setCurrent(frame);
+                options.forEach((o) => o.setAttribute('aria-pressed', String(o === btn)));
+            });
+            btn.addEventListener('dragstart', (e) => {
+                setFrameDragData(e, frame.path);
+                group.setCurrent(frame);
+                setTimeout(hideGroupPopover, 0); // after the drag has started
+            });
+            return btn;
+        });
+        groupPopover.replaceChildren(...options);
+        groupPopover.hidden = false;
+        // Fixed position above the tile (below if there is no room), kept inside the window
+        const r = tile.getBoundingClientRect();
+        const pw = groupPopover.offsetWidth;
+        const ph = groupPopover.offsetHeight;
+        const left = Math.min(Math.max(8, r.left + r.width / 2 - pw / 2), window.innerWidth - pw - 8);
+        const above = r.top - ph - 8;
+        groupPopover.style.left = `${left}px`;
+        groupPopover.style.top = `${above >= 8 ? above : r.bottom + 8}px`;
+        groupPopover.classList.toggle('symbol-group-popover--below', above < 8);
+        groupPopover.style.setProperty('--arrow-x', `${r.left + r.width / 2 - left}px`);
+    }
+
+    /**
+     * @param {string} name - group name (also the search keyword)
+     * @param {object[]} frames - frames in display order
+     */
+    function appendSidebarFrameGroup(name, frames) {
+        let current = frames[0];
+        // Numbered groups ("учасник #1" … "#6") pick a number; others pick a variant
+        const numbered = frames.every((f) => /#\d+$/.test(f.name || ''));
+        const pickWord = numbered ? 'номер' : 'варіант';
+        const tile = document.createElement('div');
+        tile.className = 'symbol-group';
+        tile.draggable = true;
+        tile.tabIndex = 0;
+        tile.setAttribute('role', 'button');
+        tile.setAttribute('aria-haspopup', 'true');
+        const img = document.createElement('img');
+        img.alt = '';
+        img.draggable = false;
+        const badge = document.createElement('span');
+        badge.className = 'symbol-group__badge';
+        badge.textContent = numbered ? `1–${frames.length}` : String(frames.length);
+        tile.dataset.search = [name, ...frames.map((f) => f.name || '')].join(' ');
+        tile.append(img, badge);
+        const group = {
+            name,
+            frames,
+            getCurrent: () => current,
+            setCurrent: (frame) => {
+                current = frame;
+                img.src = frame.path;
+                tile.title = `${frame.name || name} — наведіть, щоб вибрати ${pickWord}`;
+                tile.setAttribute('aria-label', `${frame.name || name}: вибрати ${pickWord}`);
+            },
+        };
+        group.setCurrent(current);
+        tile.addEventListener('dragstart', (e) => {
+            setFrameDragData(e, current.path);
+            setTimeout(hideGroupPopover, 0);
+        });
+        tile.addEventListener('mouseenter', () => showGroupPopover(tile, group));
+        tile.addEventListener('mouseleave', scheduleHideGroupPopover);
+        tile.addEventListener('click', () => showGroupPopover(tile, group));
+        tile.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            showGroupPopover(tile, group);
+            groupPopover.querySelector('[aria-pressed="true"]')?.focus();
+        });
+        sidebarSymbols.appendChild(tile);
     }
 
     async function appendSidebarCustom(entry) {
@@ -187,7 +332,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fillSidebar() {
         sidebarSymbols.innerHTML = '';
-        manifest.frames.forEach((frame) => appendSidebarFrame(frame));
+        hideGroupPopover();
+        // Frames sharing a `group` collapse into one tile, placed where the group's first frame is
+        const shownGroups = new Set();
+        manifest.frames.forEach((frame) => {
+            if (!frame.group) {
+                appendSidebarFrame(frame);
+                return;
+            }
+            if (shownGroups.has(frame.group)) return;
+            shownGroups.add(frame.group);
+            appendSidebarFrameGroup(
+                frame.group,
+                manifest.frames.filter((f) => f.group === frame.group),
+            );
+        });
         const customs = loadCustomSymbols();
         for (const c of customs) {
             await appendSidebarCustom(c);
@@ -203,7 +362,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const query = symbolSearch.value.trim().toLowerCase();
         let visible = 0;
         for (const el of sidebarSymbols.children) {
-            const match = !query || (el.title || '').toLowerCase().includes(query);
+            // Group tiles carry every variant name in data-search, so any variant finds them
+            const haystack = `${el.dataset.search || ''} ${el.title || ''}`.toLowerCase();
+            const match = !query || haystack.includes(query);
             el.hidden = !match;
             if (match) visible++;
         }
@@ -219,16 +380,75 @@ document.addEventListener('DOMContentLoaded', () => {
         manifest = normalizeManifest(raw);
         manifest.genericTemplates.forEach((t) => templateById.set(t.id, t));
         fillSidebar();
-        if (addSymbolTemplate) {
-            addSymbolTemplate.innerHTML = '<option value="" disabled selected>Оберіть шаблон</option>';
-            manifest.genericTemplates.forEach((t) => {
-                const opt = document.createElement('option');
-                opt.value = t.id;
-                opt.textContent = t.name || t.id;
-                addSymbolTemplate.appendChild(opt);
-            });
-        }
+        fillTemplateGrid();
     });
+
+    /** One selectable tile per generic template in the "Додати мотузку" modal. */
+    function fillTemplateGrid() {
+        if (!addSymbolTemplateGrid) return;
+        addSymbolTemplateGrid.innerHTML = '';
+        manifest.genericTemplates.forEach((t) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'template-option';
+            btn.dataset.templateId = t.id;
+            btn.setAttribute('role', 'radio');
+            btn.setAttribute('aria-checked', 'false');
+            btn.title = t.name || t.id;
+            const img = document.createElement('img');
+            img.src = t.svg;
+            img.alt = '';
+            const label = document.createElement('span');
+            label.textContent = t.name || t.id;
+            btn.append(img, label);
+            btn.addEventListener('click', () => selectAddSymbolTemplate(t.id));
+            addSymbolTemplateGrid.appendChild(btn);
+        });
+    }
+
+    /** @param {string} templateId - '' clears the selection */
+    function selectAddSymbolTemplate(templateId) {
+        if (addSymbolTemplate) addSymbolTemplate.value = templateId;
+        addSymbolTemplateGrid?.querySelectorAll('.template-option').forEach((btn) => {
+            btn.setAttribute('aria-checked', String(btn.dataset.templateId === templateId));
+        });
+        if (addSymbolEditor) addSymbolEditor.hidden = !templateId;
+        renderAddSymbolFields(templateId);
+        updateAddSymbolPreview();
+    }
+
+    /** Values of the add-up inputs currently shown in the modal (checkbox: '1' or ''). */
+    function readAddSymbolValues() {
+        const values = {};
+        addSymbolFields?.querySelectorAll('[data-add-up-id]').forEach((input) => {
+            const id = input.dataset.addUpId;
+            if (!id) return;
+            values[id] = input.type === 'checkbox' ? (input.checked ? '1' : '') : input.value || '';
+        });
+        return values;
+    }
+
+    let previewRequest = 0;
+
+    /** Re-render the live preview of the rope being configured. */
+    async function updateAddSymbolPreview() {
+        if (!addSymbolPreview) return;
+        const request = ++previewRequest;
+        const template = templateById.get(addSymbolTemplate?.value || '');
+        if (!template) {
+            addSymbolPreview.innerHTML = '';
+            return;
+        }
+        try {
+            const values = readAddSymbolValues();
+            const el = await buildGenericSymbolElement(template, values, { kind: 'generic', templateId: template.id, values });
+            if (request !== previewRequest) return; // a newer edit already started rendering
+            el.removeAttribute('draggable');
+            addSymbolPreview.replaceChildren(el);
+        } catch (err) {
+            console.error(err);
+        }
+    }
 
     const helpModal = document.getElementById('helpModal');
     if (helpBtn && helpModal) {
@@ -255,8 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!addSymbolModal) return;
         addSymbolModal.removeAttribute('hidden');
         addSymbolForm?.reset();
-        if (addSymbolTemplate) addSymbolTemplate.selectedIndex = 0;
-        if (addSymbolFields) addSymbolFields.innerHTML = '';
+        selectAddSymbolTemplate('');
         if (addSymbolDisplayName) addSymbolDisplayName.value = '';
         document.body.style.overflow = 'hidden';
     }
@@ -307,9 +526,8 @@ document.addEventListener('DOMContentLoaded', () => {
         addSymbolModal.querySelectorAll('[data-close-add-symbol]').forEach((el) => {
             el.addEventListener('click', () => closeAddSymbolModal());
         });
-        addSymbolTemplate?.addEventListener('change', () => {
-            renderAddSymbolFields(addSymbolTemplate.value);
-        });
+        addSymbolFields?.addEventListener('input', () => updateAddSymbolPreview());
+        addSymbolFields?.addEventListener('change', () => updateAddSymbolPreview());
     }
 
     document.addEventListener('keydown', (e) => {
@@ -331,21 +549,12 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const templateId = addSymbolTemplate?.value;
             if (!templateId) {
-                alert('Оберіть шаблон.');
+                alert('Оберіть позначку мотузки.');
                 return;
             }
             const template = templateById.get(templateId);
             if (!template) return;
-            const values = {};
-            addSymbolFields?.querySelectorAll('[data-add-up-id]').forEach((input) => {
-                const id = input.dataset.addUpId;
-                if (!id) return;
-                if (input.type === 'checkbox') {
-                    values[id] = input.checked ? '1' : '';
-                } else {
-                    values[id] = input.value || '';
-                }
-            });
+            const values = readAddSymbolValues();
             const displayName = (addSymbolDisplayName?.value || '').trim() || template.name || templateId;
             const customId = `c_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
             const entry = { customId, templateId, values, displayName };

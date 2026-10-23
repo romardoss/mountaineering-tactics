@@ -67,6 +67,7 @@ A bare JSON array is also accepted and treated as `{ "frames": <array>, "generic
 |-------|------|----------|---------|
 | `path` | string | yes | Image URL relative to the site root, e.g. `images/Frame 1.svg` |
 | `name` | string | no | Tooltip text shown in the sidebar (Ukrainian action name) |
+| `group` | string | no | Frames with the same `group` are shown as **one** sidebar tile with a number picker (§4.2). The value is the group's name and search keyword |
 
 #### GenericTemplate
 
@@ -92,10 +93,12 @@ A bare JSON array is also accepted and treated as `{ "frames": <array>, "generic
 
 ### 3.2 Current content
 
-1. **40 frames:** `Frame 1–23`, `32–44`, `49–51`, `56`.
-2. **2 generic templates:**
+1. **38 frames** in the sidebar: `Frame 1–23`, `32–44`, `49`, `50`. Frames 18–23 ("учасник #1" … "#6") form the group `"учасник"`; frames 34–37 (the four "петля …" variants) form the group `"петля"`; frames 38–41 (перила, перила суддівські, вантажні перила, вантажні перила суддівські) form the group `"перила"`.
+2. **3 generic templates** (built in the **Додати мотузку** window):
    1. `rope` ("Мотузка"): add-ups `meters` (text), `note` (text) and `referee` (checkbox, draws `с`).
    2. `helping_rope` ("Мотузка допоміжна"): add-ups `meters` and `note`.
+   3. `rail_rope` ("Мотузка основна, перильна", base `generic/generic_rail_rope.svg`: a horizontal line over a wave): add-ups `meters`, `note` and `referee` (checkbox, draws `с` above the line). It replaces the former sidebar frames 51 ("мотузка основна, перильна") and 56 (the same, суддівська).
+3. **Retired frame files:** `Frame 51.svg` and `Frame 56.svg` are no longer in the manifest, but the files stay in `static/images/`, so older saved tables that reference them still render. Do not delete them.
 
 ### 3.3 Overlay rendering rules
 
@@ -105,7 +108,19 @@ The main app (`buildGenericSymbolElement`) and the template editor (`buildPrevie
 2. For each add-up that has `svgText`:
    1. **Text add-up:** trim the value. If it is empty, draw nothing. Otherwise draw the value.
    2. **Checkbox add-up:** it is "on" if the value is `"1"`, `true`, `"true"`, or a string whose trimmed value equals `checkedText`. When on, draw `checkedText`.
-3. Each overlay is appended as an SVG `<text>` element with `fill="#000000"`, `font-family="system-ui, Segoe UI, sans-serif"`, and the configured `x`, `y`, `font-size` and `text-anchor`.
+3. Each overlay is appended as an SVG `<text>` element with `fill="#000000"`, `font-family="Arial, Helvetica, 'Liberation Sans', sans-serif"`, `font-weight="normal"` (overlay text is never bold), and the configured `x`, `y`, `font-size` and `text-anchor`.
+4. Each overlay also gets a white halo (`stroke="#ffffff"`, `stroke-width` = 16% of the font size with a minimum of 2, `paint-order="stroke"`), so it stays readable where it crosses the base symbol's lines.
+
+### 3.4 Symbol drawing style
+
+All frame symbols and generic bases share one style so they read consistently at 50 px:
+
+1. A 300×300 `viewBox`, transparent background (no background rectangles), and pure vector drawing (no embedded raster images).
+2. Ink `#111111`, stroke width 12 (about 2 px at 50 px), with round line caps and joins.
+3. Arrows use filled triangular heads; curved arrows (Frame 17) use open chevrons.
+4. Letters and digits use `Arial, Helvetica, 'Liberation Sans', sans-serif`. The referee mark is the Cyrillic letter "С"/"с".
+5. Each symbol keeps the shapes and layout of its original version: only line weight and finish were unified. File names are unchanged, so existing saved tables show the new drawings.
+6. Generic bases keep their original curves, because add-up text positions (`svgText`) are tuned to them.
 
 ---
 
@@ -115,7 +130,7 @@ The main app (`buildGenericSymbolElement`) and the template editor (`buildPrevie
 
 The UI uses a single light theme. Colors, radii and shadows are defined as CSS custom properties on `:root` in `style.css`.
 
-1. **Sidebar** (236 px, left): the title "Позначки" with a "Перетягніть у таблицю" hint, a search box, a **Власна позначка** button, then a grid of draggable symbol tiles, three per row. Symbols render at 50×50 px.
+1. **Sidebar** (236 px, left): the title "Позначки" with a "Перетягніть у таблицю" hint, a search box, a **Додати мотузку** button, then a grid of draggable symbol tiles, three per row. Symbols render at 50×50 px.
 2. **Main content:**
    1. **Header:** logo, title "Тактика проходження" and the **?** help button. The logo links to the club's Telegram channel, https://t.me/kpi_globus, which opens in a new tab.
    2. **Toolbar** (`.controls`, sticky while the table scrolls), in three groups:
@@ -129,17 +144,25 @@ The UI uses a single light theme. Colors, radii and shadows are defined as CSS c
 ### 4.2 Sidebar symbols
 
 1. On load, the sidebar shows every manifest **frame** (as `<img>` with a `name` tooltip), followed by the user's **custom symbols** from `localStorage`.
-2. Generic templates are **not** shown directly. The user creates presets from them with **Власна позначка**.
-3. **Add a custom symbol (Власна позначка):** opens the modal "Нова позначка":
-   1. The user picks a template ("Шаблон") from the dropdown.
-   2. The form shows one input per add-up (first 3 only): a text field, or a checkbox for `control: "checkbox"`.
+2. Generic templates are **not** shown directly. The user creates presets (custom ropes) from them with the **Додати мотузку** button.
+3. **Add a rope (Додати мотузку):** opens the modal "Нова мотузка":
+   1. **Позначка:** a grid of tiles (`#addSymbolTemplateGrid`, `role="radiogroup"`), one per generic template, each showing its base SVG and name. The user clicks a tile (or focuses it and presses Space/Enter) to select it. The selected tile is highlighted (`aria-checked="true"`), and its id is kept in the hidden input `#addSymbolTemplate`. Nothing is preselected when the modal opens.
+   2. After a selection, an editor area appears with a **live preview** (`#addSymbolPreview`, rendered with the §3.3 overlay rules) next to one input per add-up (first 3 only): a text field, or a checkbox for `control: "checkbox"`. The preview updates on every edit and when switching templates.
    3. The user optionally enters a display name ("Назва (підказка)"). It defaults to the template name, then the template id.
    4. On submit, the app generates `customId = "c_<timestamp>_<random7>"`, appends the entry to storage and adds the symbol to the sidebar. Checkbox values are stored as `"1"` (on) or `""` (off).
-   5. If no template is chosen, the app alerts "Оберіть шаблон.".
-4. **Delete a custom symbol:** right-click it in the sidebar and confirm. It is removed from storage and from the sidebar. Copies already placed in table cells stay.
+   5. If no tile is selected, the app alerts "Оберіть позначку мотузки.".
+4. **Delete a custom symbol:** right-click it in the sidebar and confirm ("Видалити цю мотузку зі списку?"). It is removed from storage and from the sidebar. Copies already placed in table cells stay.
 5. A custom entry whose `templateId` no longer exists in the manifest is silently skipped.
 6. Custom symbols have an accent-colored corner so they can be told apart from manifest frames.
+
 7. **Search:** typing in the search box hides sidebar symbols whose tooltip (`title`) doesn't contain the query (case-insensitive). If nothing matches, the sidebar shows "Нічого не знайдено". Symbols added later are filtered too.
+8. **Frame groups** (учасник 1–6, петля, перила):
+   1. All frames with the same `group` collapse into one tile (`.symbol-group`), placed where the group's first frame is in the manifest. The tile shows its current frame (the first one by default) and a badge: "1–N" when every frame name ends in `#<number>` (a numbered group), otherwise the number of variants N. The tooltip says "вибрати номер" or "вибрати варіант" accordingly.
+   2. Hovering, clicking or pressing Enter/Space on the tile opens a picker (`.symbol-group-popover`, fixed position, above the tile or below it if there's no room) with one option per frame.
+   3. Clicking an option makes it the tile's current frame. Dragging the tile drops the current frame. Dragging an option drops that frame directly (and makes it current).
+   4. The picker closes 200 ms after the pointer leaves both the tile and the picker, when a drag starts, when the sidebar scrolls, or on Escape.
+   5. Drops use the frame's image path, exactly like single frames, so saved tables and older files are unaffected.
+   6. Search (item 7) matches a group tile by its group name or **any** of its variants' names (`data-search`), not only the variant currently shown.
 
 ### 4.3 Table structure
 
@@ -220,7 +243,7 @@ The app downloads `table-data.json` in the format described in §5: the team nam
    3. Text in a cell wraps within that width.
    4. Both tables get the same column widths. Their cards and the captured area shrink to the wider of the tables and the header.
    5. The on-screen column widths are restored after the export.
-3. During capture, the sidebar, toolbar, **?** button, **Власна позначка** button, **Додати часову стадію** button and the "Дія" columns of both tables are hidden. Name inputs are temporarily replaced by plain text (`.member-name-export`), so empty names stay blank instead of showing the placeholder.
+3. During capture, the sidebar, toolbar, **?** button, **Додати мотузку** button, **Додати часову стадію** button and the "Дія" columns of both tables are hidden. Name inputs are temporarily replaced by plain text (`.member-name-export`), so empty names stay blank instead of showing the placeholder.
 4. During capture, `<img>` sources are inlined as data URLs, and inline generic SVGs are temporarily replaced by `<img>` elements with SVG data URLs.
 5. Table cells must keep an explicit background color and have no CSS transitions. Otherwise html2canvas paints artifacts into the PNG.
 6. Everything is restored afterwards, even if the export fails. On failure, the app alerts "Не вдалося експортувати таблицю."

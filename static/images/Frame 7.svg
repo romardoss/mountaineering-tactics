@@ -1,4 +1,5 @@
-<svg width="300" height="300" viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M228 152.5H230.5V147.5H228V150V152.5ZM78 150L103 164.434V135.566L78 150ZM228 150V147.5H100.5V150V152.5H228V150Z" fill="black"/>
-<line x1="75.5" y1="27.5" x2="75.5" y2="272.5" stroke="black" stroke-width="5" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300" fill="none" stroke="#111111" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+<line x1="75.5" y1="28" x2="75.5" y2="272"/>
+<line x1="228" y1="150" x2="108" y2="150"/>
+<polygon points="78.0,150.0 120.0,128.0 120.0,172.0" fill="#111111" stroke-width="6"/>
 </svg>

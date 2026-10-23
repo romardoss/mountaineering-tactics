@@ -18,9 +18,9 @@
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                 <input type="search" id="symbolSearch" placeholder="Пошук позначки…" autocomplete="off" aria-label="Пошук позначки">
             </label>
-            <button type="button" id="addSymbolBtn" class="add-symbol-btn" title="Додати власну позначку" aria-label="Додати позначку">
+            <button type="button" id="addSymbolBtn" class="add-symbol-btn" title="Додати мотузку з власними параметрами" aria-label="Додати мотузку">
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                <span>Власна позначка</span>
+                <span>Додати мотузку</span>
             </button>
             <div class="sidebar-symbols" id="sidebarSymbols"></div>
             <p class="sidebar-empty" id="symbolSearchEmpty" hidden>Нічого не знайдено</p>
@@ -109,16 +109,18 @@
         <div class="help-modal__backdrop" data-close-add-symbol tabindex="-1" aria-hidden="true"></div>
         <div class="help-modal__panel add-symbol-modal__panel">
             <button type="button" class="help-modal__close" data-close-add-symbol aria-label="Закрити">&times;</button>
-            <h2 id="addSymbolModalTitle">Нова позначка</h2>
-            <p class="help-modal__lead">Оберіть шаблон і заповніть поля — позначка з’явиться у списку зліва.</p>
+            <h2 id="addSymbolModalTitle">Нова мотузка</h2>
+            <p class="help-modal__lead">Оберіть позначку і заповніть поля — мотузка з’явиться у списку зліва.</p>
             <form id="addSymbolForm" class="add-symbol-form">
-                <label class="add-symbol-form__row">
-                    <span>Шаблон</span>
-                    <select id="addSymbolTemplate" name="template" required>
-                        <option value="" disabled selected>Оберіть шаблон</option>
-                    </select>
-                </label>
-                <div id="addSymbolFields" class="add-symbol-fields"></div>
+                <div class="add-symbol-form__row">
+                    <span id="addSymbolTemplateLabel">Позначка</span>
+                    <div id="addSymbolTemplateGrid" class="template-grid" role="radiogroup" aria-labelledby="addSymbolTemplateLabel"></div>
+                    <input type="hidden" id="addSymbolTemplate" name="template">
+                </div>
+                <div id="addSymbolEditor" class="add-symbol-editor" hidden>
+                    <div id="addSymbolPreview" class="add-symbol-preview" aria-label="Попередній перегляд"></div>
+                    <div id="addSymbolFields" class="add-symbol-fields"></div>
+                </div>
                 <label class="add-symbol-form__row">
                     <span>Назва (підказка)</span>
                     <input type="text" id="addSymbolDisplayName" name="displayName" placeholder="Напр. мотузка 40м" autocomplete="off">
@@ -140,7 +142,8 @@
             <div class="help-modal__body">
                 <ul>
                     <li>Перетягніть позначки зліва в клітинки таблиці. Пошук над списком фільтрує позначки за назвою.</li>
-                    <li>Власні позначки (кнопка <strong>Власна позначка</strong>): <strong>правий клік</strong> по іконці в списку — прибрати її зі списку (у клітинках таблиці вже вставлені зображення не зникають).</li>
+                    <li><strong>Учасник 1–6</strong>, <strong>петля</strong> і <strong>перила</strong> — позначки з міткою в кутку («1–6», «4»): наведіть на них, щоб з’явилися варіанти. Клацніть варіант, щоб вибрати його, і перетягніть позначку, або перетягніть потрібний варіант одразу в клітинку.</li>
+                    <li>Власні мотузки (кнопка <strong>Додати мотузку</strong>: оберіть позначку в сітці, вкажіть довжину тощо): <strong>правий клік</strong> по іконці в списку — прибрати її зі списку (у клітинках таблиці вже вставлені зображення не зникають).</li>
                     <li>Клацніть по клітинці, щоб змінити текст. Якщо рядок закінчується позначкою — клацніть поза нею, щоб додати текст після неї; якщо вже закінчується текстом — такий клік відкриває редагування останнього тексту. <kbd>Enter</kbd> — зберегти, <kbd>Esc</kbd> — скасувати. Правий клік по зображенню в клітинці — видалити його.</li>
                     <li><strong>Пензель</strong>: клацніть по краю клітинки, щоб намалювати або прибрати кольорову лінію.</li>
                     <li><strong>Верхня таблиця</strong> — команда: у першому рядку впишіть імена учасників, у другий («Спорядження перед стартом») перетягніть мотузки та інше спорядження, з яким кожен починає. Колонки збігаються з основною таблицею.</li>
