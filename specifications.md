@@ -122,7 +122,7 @@ The UI uses a single light theme. Colors, radii and shadows are defined as CSS c
       1. **Учасник −/+**: icon buttons that remove or add a participant.
       2. **Пензель**.
       3. **Відкрити**, **Зберегти** and the primary **Завантажити PNG**.
-   3. **Table:** shown as a white card.
+   3. **Team table** (`#teamTable`, §4.3.1) and below it the **main table** (`#editableTable`), each shown as a white card.
    4. **Додати часову стадію:** a full-width button directly under the table, because new rows are added at the bottom.
 3. **Narrow screens:** below 900 px, toolbar buttons show icons only, with their names kept in tooltips. Below 640 px, the sidebar moves above the table.
 
@@ -152,9 +152,20 @@ The UI uses a single light theme. Colors, radii and shadows are defined as CSS c
 4. **Учасник +** (`#addColBtn`): inserts a column before "Дія". Its header is the previous last header number + 1. Its cells are filled with `-`.
 5. **Учасник −** (`#removeColBtn`): removes the last participant column. The last remaining participant column cannot be removed (alert "Не можна видалити останнього учасника.").
 
+#### 4.3.1 Team table
+
+A smaller table above the main one describes the team at the start.
+
+1. It has **no header row**. It has the same number of columns as the main table, and its column widths match (the last column is 124 px in both), so the columns line up. During export, the column widths are applied to the cells of its first row.
+2. It always has exactly **two rows**, which cannot be added or deleted:
+   1. **Names** (`.team-names-row`): one always-editable text input per participant (`.member-name-input`), with the placeholder "Ім’я учасника". **Enter** finishes editing.
+   2. **Спорядження перед стартом** (`.team-start-row`): cells behave exactly like main-table cells (§4.4–4.7: drop symbols, mixed text, right-click removal, brush). It is used to show which ropes and equipment each member carries at the start. New cells contain `-`.
+3. Its last-column cells hold the labels "Імена" and "Спорядження перед стартом" (`.buttonRow.team-label-cell`) instead of buttons.
+4. **Учасник +/−** adds or removes the last column in **both** tables.
+
 ### 4.4 Placing symbols (drag and drop)
 
-1. Symbols can be dropped onto any body cell (`td`).
+1. Symbols can be dropped onto any participant cell of the main table and of the team table's start row. Drops on name cells and on "Дія" cells are ignored.
 2. On the first drop, the cell's plain text is cleared and replaced by a `.cell-content-wrapper` container. Later drops append to that container.
 3. Drag payloads:
    1. **Frame:** `text/plain` holds the image path.
@@ -187,28 +198,29 @@ The UI uses a single light theme. Colors, radii and shadows are defined as CSS c
 
 ### 4.8 Save (Зберегти)
 
-The app downloads `table-data.json` in the format described in §5. The "Дія" column is not saved.
+The app downloads `table-data.json` in the format described in §5: the team names, the team start row and the main rows. The "Дія" columns are not saved.
 
 ### 4.9 Open (Відкрити)
 
-1. The user picks a `.json` file. The app replaces the whole table with its contents.
-2. Headers are regenerated as `1..N` + "Дія", where N is the length of the first row.
-3. Invalid JSON produces the alert "Некоректний файл JSON."
-4. Generic segments whose template is missing from the manifest are skipped silently.
+1. The user picks a `.json` file. The app replaces both tables with its contents.
+2. Both the current object format and the older **bare-array** format (§5.4) are accepted. An old file opens with empty names and `-` in every start cell.
+3. Headers are regenerated as `1..N` + "Дія". N is the length of the first row, or the number of team names or start cells if there are no rows, or the current column count otherwise. An empty table therefore keeps its header.
+4. Invalid JSON produces the alert "Некоректний файл JSON.". Valid JSON with an unknown structure produces "Не вдалося відкрити таблицю: невідомий формат файлу." and leaves the current table untouched.
+5. Generic segments whose template is missing from the manifest are skipped silently.
 
 ### 4.10 Export (Завантажити PNG)
 
-1. The app downloads `table-export.png`, a raster of `#main-content` made with `html2canvas`. The PNG always contains the **whole** table, however long, not only the part visible on screen.
+1. The app downloads `table-export.png`, a raster of `#main-content` made with `html2canvas`. The PNG contains the team table and the **whole** main table, however long, not only the part visible on screen. It is cropped to the content, with no empty space below or to the right.
    1. During capture, `body.exporting` turns off the inner scrolling of the 100vh layout, so `#main-content` grows to its full height.
    2. The window is scrolled to the top, and html2canvas gets the full document size (`windowWidth`, `windowHeight`) with `scrollX`/`scrollY` set to 0.
    3. Afterwards, the scroll positions of the window and of `#main-content` are restored.
 2. **Column width in the PNG:** every participant column gets the same width.
-   1. The width is the widest single line of symbols in any cell (images and generic symbols, plus the gaps between them), plus the cell padding, plus a margin (`EXPORT_CELL_MARGIN`, 24 px).
+   1. The width is the widest single line of symbols in any cell of either table (images and generic symbols, plus the gaps between them), plus the cell padding, plus a margin (`EXPORT_CELL_MARGIN`, 24 px).
    2. Columns are never narrower than `EXPORT_MIN_CELL_WIDTH` (120 px), which also applies when there are no symbols.
    3. Text in a cell wraps within that width.
-   4. The captured area shrinks to the wider of the table and the header, so the PNG has no empty space on the right.
+   4. Both tables get the same column widths. Their cards and the captured area shrink to the wider of the tables and the header.
    5. The on-screen column widths are restored after the export.
-3. During capture, the sidebar, toolbar, **?** button, **Власна позначка** button, **Додати часову стадію** button and the "Дія" column are hidden.
+3. During capture, the sidebar, toolbar, **?** button, **Власна позначка** button, **Додати часову стадію** button and the "Дія" columns of both tables are hidden. Name inputs are temporarily replaced by plain text (`.member-name-export`), so empty names stay blank instead of showing the placeholder.
 4. During capture, `<img>` sources are inlined as data URLs, and inline generic SVGs are temporarily replaced by `<img>` elements with SVG data URLs.
 5. Table cells must keep an explicit background color and have no CSS transitions. Otherwise html2canvas paints artifacts into the PNG.
 6. Everything is restored afterwards, even if the export fails. On failure, the app alerts "Не вдалося експортувати таблицю."
@@ -222,7 +234,21 @@ The app downloads `table-data.json` in the format described in §5. The "Дія"
 
 ## 5. Table file format (`table-data.json`)
 
-The top level is an array of **rows**. Each row is an array of **cells**, one per participant column. All rows are expected to have the same length.
+The current format (written since the team table was added) is an object:
+
+```jsonc
+{
+  "format": "tactics-table",
+  "version": 3,
+  "team": {
+    "names": [ "Андрій", "Оля", "" ],   // one string per column ("" = empty)
+    "start": [ Cell, Cell, Cell ]      // team start row, one cell per column
+  },
+  "rows": [ [ Cell, Cell, Cell ], ... ] // main table, one array per step
+}
+```
+
+Every row, plus `team.names` and `team.start`, should have the same length (the column count). Cells use the variants below.
 
 ### 5.1 Cell variants
 
@@ -254,6 +280,11 @@ The top level is an array of **rows**. Each row is an array of **cells**, one pe
 2. A wrapper with no segments is saved as `{ "type": "text", "content": "" }`.
 3. A generic segment stores **values only**. It is re-rendered from the current manifest when loaded, so changing a template changes how saved tables look. A template `id` must therefore never be renamed or removed while tables still use it.
 4. A legacy `images` cell loads as its images followed by one text segment holding `caption`.
+
+### 5.4 Older formats (read-only)
+
+1. **Bare array** (all saves before the team table): the top level is the `rows` array itself, with no `team`. It loads with an empty team table.
+2. Missing or partial `team.names` / `team.start` arrays are padded with empty names and `-` cells.
 
 ---
 
@@ -317,16 +348,15 @@ This is a local-only tool for maintaining `genericTemplates`. It is not deployed
 
 ## 10. Known limitations and open issues
 
-1. A JSON file that is valid but has the wrong structure can crash `rebuildTable`. Only parse errors are caught.
-2. Opening an empty array (`[]`) clears both the header and the body, which leaves no table.
-3. The "add participant" column number is computed from the last header text. A non-numeric header gives `NaN`.
-4. The help modal and the add-symbol modal have no focus trap.
-5. Generic symbols render at a fixed 50×50 px. Overlay coordinates are in each base SVG's own coordinate system.
-6. `update_images.py` is obsolete:
+1. Only the top-level structure of an opened file is validated. A file whose top level is valid but whose individual cells are malformed (for example `null` cells) can still fail partway through loading.
+2. The "add participant" column number is computed from the last header text. A non-numeric header gives `NaN`.
+3. The help modal and the add-symbol modal have no focus trap.
+4. Generic symbols render at a fixed 50×50 px. Overlay coordinates are in each base SVG's own coordinate system.
+5. `update_images.py` is obsolete:
    1. Its `SCRIPT_FILE` path has a typo (`statis/script.js`).
    2. It targets an `imageUrls` array that no longer exists.
    3. It ignores `.svg` files.
 
    The manifest is now `image.json`, maintained by hand or with the template editor.
-7. Custom symbols live in `localStorage`, so they are lost when site data is cleared and are not synced across devices.
-8. Pressing **Enter** in a mixed-cell text input saves it, and the blur that follows tries to save it again. This logs a harmless `replaceWith` DOM error in the console. The saved text is correct.
+6. Custom symbols live in `localStorage`, so they are lost when site data is cleared and are not synced across devices.
+7. Pressing **Enter** in a mixed-cell text input saves it, and the blur that follows tries to save it again. This logs a harmless `replaceWith` DOM error in the console. The saved text is correct.

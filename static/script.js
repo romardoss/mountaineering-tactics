@@ -428,6 +428,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tableBody.querySelectorAll('tr').forEach(addRemoveButton);
 
+    // ---------- Team table (above the main table): member names + equipment at the start ----------
+    const teamTable = document.getElementById('teamTable');
+    const teamBody = teamTable?.querySelector('tbody');
+    if (!teamTable || !teamBody) {
+        console.error('Team table not found!');
+        return;
+    }
+    const TEAM_NAME_PLACEHOLDER = 'Ім’я учасника';
+
+    function getColumnCount() {
+        return table.querySelector('thead tr').childElementCount - 1;
+    }
+
+    /**
+     * @param {HTMLTableRowElement} row
+     * @param {number} index - cell index (-1 = end)
+     * @param {string} [name]
+     */
+    function insertMemberNameCell(row, index, name) {
+        const cell = row.insertCell(index);
+        cell.className = 'member-name-cell';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'member-name-input';
+        input.placeholder = TEAM_NAME_PLACEHOLDER;
+        input.autocomplete = 'off';
+        input.setAttribute('aria-label', TEAM_NAME_PLACEHOLDER);
+        input.value = name || '';
+        input.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter') input.blur();
+        });
+        cell.appendChild(input);
+        return cell;
+    }
+
+    function insertTeamLabelCell(row, label) {
+        const cell = row.insertCell();
+        cell.className = 'buttonRow team-label-cell';
+        cell.textContent = label;
+    }
+
+    /**
+     * Rebuild the team table for the given column count.
+     * @param {number} columnCount
+     * @param {{ names?: string[], start?: object[] }} [team]
+     */
+    async function buildTeamTable(columnCount, team = {}) {
+        teamBody.innerHTML = '';
+        const names = Array.isArray(team.names) ? team.names : [];
+        const start = Array.isArray(team.start) ? team.start : [];
+        const namesRow = teamBody.insertRow();
+        namesRow.className = 'team-names-row';
+        const startRow = teamBody.insertRow();
+        startRow.className = 'team-start-row';
+        for (let i = 0; i < columnCount; i++) {
+            insertMemberNameCell(namesRow, -1, typeof names[i] === 'string' ? names[i] : '');
+            const cell = startRow.insertCell();
+            if (start[i]) await fillCell(cell, start[i]);
+            else cell.textContent = '-';
+        }
+        insertTeamLabelCell(namesRow, 'Імена');
+        insertTeamLabelCell(startRow, 'Спорядження перед стартом');
+    }
+
+    buildTeamTable(getColumnCount());
+
+    /** Both table bodies that hold symbol cells. */
+    const symbolBodies = [teamBody, tableBody];
+
+    /** A cell that accepts symbols, text and brush edges (not names, not the actions column). */
+    function isSymbolCell(cell) {
+        return (
+            !!cell &&
+            cell.tagName === 'TD' &&
+            !cell.classList.contains('buttonRow') &&
+            !cell.classList.contains('member-name-cell')
+        );
+    }
+
     function parseDroppedSymbol(textPlain, appJson) {
         if (appJson) {
             try {
@@ -461,26 +540,31 @@ document.addEventListener('DOMContentLoaded', () => {
         dropTargetCell?.classList.add('drop-target');
     }
 
-    tableBody.addEventListener('dragover', (e) => {
+    /** Bind the same handler on every symbol-cell table body. */
+    function onSymbolBodies(type, handler) {
+        symbolBodies.forEach((body) => body.addEventListener(type, handler));
+    }
+
+    onSymbolBodies('dragover', (e) => {
         e.preventDefault();
         const cell = e.target.closest && e.target.closest('td');
-        setDropTarget(cell && !cell.classList.contains('buttonRow') ? cell : null);
+        setDropTarget(isSymbolCell(cell) ? cell : null);
     });
 
-    tableBody.addEventListener('dragleave', (e) => {
-        if (!e.relatedTarget || !tableBody.contains(e.relatedTarget)) setDropTarget(null);
+    onSymbolBodies('dragleave', (e) => {
+        if (!e.relatedTarget || !e.currentTarget.contains(e.relatedTarget)) setDropTarget(null);
     });
 
     document.addEventListener('dragend', () => setDropTarget(null));
 
-    tableBody.addEventListener('drop', async (e) => {
+    onSymbolBodies('drop', async (e) => {
         e.preventDefault();
         setDropTarget(null);
         let targetCell = e.target;
         while (targetCell && targetCell.tagName !== 'TD') {
             targetCell = targetCell.parentElement;
         }
-        if (!targetCell || targetCell.tagName !== 'TD') return;
+        if (!isSymbolCell(targetCell)) return;
 
         const appJson = e.dataTransfer.getData('application/x-tactics-symbol');
         const textPlain = e.dataTransfer.getData('text/plain');
@@ -521,7 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    tableBody.addEventListener('contextmenu', (e) => {
+    onSymbolBodies('contextmenu', (e) => {
         let actionTaken = false;
         const gen = e.target.closest && e.target.closest('.symbol-generic');
         if (gen) {
@@ -658,9 +742,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    tableBody.addEventListener('click', (e) => {
+    onSymbolBodies('click', (e) => {
         const cell = e.target.closest('td');
-        if (!cell || cell.classList.contains('buttonRow')) return;
+        if (!isSymbolCell(cell)) return;
 
         if (isBrushActive) {
             const rect = cell.getBoundingClientRect();
@@ -723,6 +807,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const newCell = row.insertCell(row.cells.length - 1);
             newCell.textContent = '-';
         });
+        const namesRow = teamBody.querySelector('.team-names-row');
+        const startRow = teamBody.querySelector('.team-start-row');
+        insertMemberNameCell(namesRow, namesRow.cells.length - 1);
+        startRow.insertCell(startRow.cells.length - 1).textContent = '-';
     });
 
     removeColBtn.addEventListener('click', () => {
@@ -733,13 +821,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         headerCells[headerCells.length - 2].remove();
-        tableBody.querySelectorAll('tr').forEach((row) => {
+        [...tableBody.rows, ...teamBody.rows].forEach((row) => {
             row.deleteCell(row.cells.length - 2);
         });
     });
 
     function collectVisualExportNodes() {
-        return tableBody.querySelectorAll('.cell-content-wrapper img, .cell-content-wrapper .symbol-generic svg');
+        return document.querySelectorAll(
+            '#teamTable .cell-content-wrapper img, #teamTable .cell-content-wrapper .symbol-generic svg, ' +
+                '#editableTable .cell-content-wrapper img, #editableTable .cell-content-wrapper .symbol-generic svg',
+        );
     }
 
     function svgToDataUrl(svg) {
@@ -758,7 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function measureWidestSymbolRow() {
         let widest = 0;
-        tableBody.querySelectorAll('.cell-content-wrapper').forEach((wrapper) => {
+        symbolBodies.flatMap((body) => [...body.querySelectorAll('.cell-content-wrapper')]).forEach((wrapper) => {
             const media = [...wrapper.children].filter(
                 (ch) => ch.tagName === 'IMG' || ch.classList.contains('symbol-generic'),
             );
@@ -777,6 +868,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyExportColumnWidths() {
         const widest = measureWidestSymbolRow();
         const headers = [...table.querySelectorAll('thead th')].slice(0, -1);
+        // The team table has no header: its first row's cells define the column widths
+        const teamHeaders = [...(teamBody.rows[0]?.cells || [])].slice(0, -1);
         if (!headers.length) return () => {};
         const sample = tableBody.querySelector('td');
         const cs = sample ? getComputedStyle(sample) : null;
@@ -784,14 +877,19 @@ document.addEventListener('DOMContentLoaded', () => {
             ? parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth)
             : 0;
         const colWidth = Math.ceil(Math.max(EXPORT_MIN_CELL_WIDTH, widest + chrome + EXPORT_CELL_MARGIN));
-        const saved = { table: table.style.width, headers: headers.map((th) => th.style.width) };
-        headers.forEach((th) => {
+        const allHeaders = [...headers, ...teamHeaders];
+        const saved = {
+            tables: [table.style.width, teamTable.style.width],
+            headers: allHeaders.map((th) => th.style.width),
+        };
+        allHeaders.forEach((th) => {
             th.style.width = `${colWidth}px`;
         });
         table.style.width = `${colWidth * headers.length}px`;
+        teamTable.style.width = `${colWidth * headers.length}px`;
         return () => {
-            table.style.width = saved.table;
-            headers.forEach((th, i) => {
+            [table.style.width, teamTable.style.width] = saved.tables;
+            allHeaders.forEach((th, i) => {
                 th.style.width = saved.headers[i];
             });
         };
@@ -799,7 +897,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     exportBtn.addEventListener('click', async () => {
         const elementsToHide = [sidebar, controls, helpBtn, addSymbolBtn, addRowBtn].filter(Boolean);
-        const actionsColumnCells = table.querySelectorAll('tr > :last-child');
+        const actionsColumnCells = document.querySelectorAll('#editableTable tr > :last-child, #teamTable tr > :last-child');
+        const nameInputs = [...teamBody.querySelectorAll('.member-name-input')];
         const visuals = collectVisualExportNodes();
         const originalSrc = new Map();
 
@@ -820,6 +919,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('exporting');
         elementsToHide.forEach((el) => el.classList.add('export-hidden'));
         actionsColumnCells.forEach((cell) => cell.classList.add('export-hidden'));
+        // Inputs don't rasterize reliably (html2canvas would also draw the placeholder): show names as plain text
+        const nameCopies = nameInputs.map((input) => {
+            const span = document.createElement('span');
+            span.className = 'member-name-export';
+            span.textContent = input.value;
+            input.before(span);
+            input.classList.add('export-hidden');
+            return span;
+        });
         // Measure before SVGs are swapped for raster copies
         const restoreColumnWidths = applyExportColumnWidths();
 
@@ -870,6 +978,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             restoreColumnWidths();
+            nameCopies.forEach((span) => span.remove());
+            nameInputs.forEach((input) => input.classList.remove('export-hidden'));
             elementsToHide.forEach((el) => el.classList.remove('export-hidden'));
             actionsColumnCells.forEach((cell) => cell.classList.remove('export-hidden'));
             document.body.classList.remove('exporting');
@@ -879,35 +989,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    /** Saved-file format marker; files from before the team table are a bare array of rows. */
+    const SAVE_FORMAT = 'tactics-table';
+    const SAVE_VERSION = 3;
+
+    /**
+     * @param {HTMLTableCellElement} cell
+     * @returns {object} `{ type: 'text', content }` or `{ type: 'mixed', segments }`, plus `paintedBorders`
+     */
+    function serializeCell(cell) {
+        const paintedBorders = {
+            top: cell.classList.contains('painted-top'),
+            right: cell.classList.contains('painted-right'),
+            bottom: cell.classList.contains('painted-bottom'),
+            left: cell.classList.contains('painted-left'),
+        };
+        const wrapper = cell.querySelector('.cell-content-wrapper');
+        if (wrapper) {
+            const segments = serializeMixedSegments(wrapper);
+            if (segments.length) return { type: 'mixed', segments, paintedBorders };
+            return { type: 'text', content: '', paintedBorders };
+        }
+        return { type: 'text', content: cell.textContent, paintedBorders };
+    }
+
+    /** Serialize a row's participant cells (skips the trailing actions cell). */
+    function serializeRowCells(row) {
+        return [...row.cells].slice(0, -1).map(serializeCell);
+    }
+
     saveBtn.addEventListener('click', () => {
-        const tableData = [];
-        const rows = tableBody.querySelectorAll('tr');
-        rows.forEach((row) => {
-            const rowData = [];
-            const cells = row.querySelectorAll('td');
-            for (let i = 0; i < cells.length - 1; i++) {
-                const cell = cells[i];
-                const paintedBorders = {
-                    top: cell.classList.contains('painted-top'),
-                    right: cell.classList.contains('painted-right'),
-                    bottom: cell.classList.contains('painted-bottom'),
-                    left: cell.classList.contains('painted-left'),
-                };
-                const wrapper = cell.querySelector('.cell-content-wrapper');
-                if (wrapper) {
-                    const segments = serializeMixedSegments(wrapper);
-                    if (segments.length) {
-                        rowData.push({ type: 'mixed', segments, paintedBorders });
-                    } else {
-                        rowData.push({ type: 'text', content: '', paintedBorders });
-                    }
-                } else {
-                    rowData.push({ type: 'text', content: cell.textContent, paintedBorders });
-                }
-            }
-            tableData.push(rowData);
-        });
-        const jsonData = JSON.stringify(tableData, null, 2);
+        const namesRow = teamBody.querySelector('.team-names-row');
+        const startRow = teamBody.querySelector('.team-start-row');
+        const saveData = {
+            format: SAVE_FORMAT,
+            version: SAVE_VERSION,
+            team: {
+                names: [...namesRow.querySelectorAll('.member-name-input')].map((input) => input.value),
+                start: serializeRowCells(startRow),
+            },
+            rows: [...tableBody.rows].map(serializeRowCells),
+        };
+        const jsonData = JSON.stringify(saveData, null, 2);
         const blob = new Blob([jsonData], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -930,7 +1053,10 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.onload = (event) => {
             try {
                 const data = JSON.parse(event.target.result);
-                rebuildTable(data).catch((err) => console.error(err));
+                rebuildTable(data).catch((err) => {
+                    console.error(err);
+                    alert('Не вдалося відкрити таблицю: невідомий формат файлу.');
+                });
             } catch (error) {
                 console.error('Error parsing JSON file:', error);
                 alert('Некоректний файл JSON.');
@@ -940,14 +1066,109 @@ document.addEventListener('DOMContentLoaded', () => {
         fileInput.value = '';
     });
 
+    /**
+     * Generic symbol element for a saved segment, or null if its template is gone.
+     * @param {object} seg
+     */
+    async function buildSavedGeneric(seg) {
+        const template = templateById.get(seg.templateId);
+        if (!template) return null;
+        const payload = {
+            kind: 'generic',
+            templateId: seg.templateId,
+            values: seg.values || {},
+            displayName: seg.displayName || template.name,
+            customId: seg.customId,
+        };
+        try {
+            const el = await buildGenericSymbolElement(template, payload.values, payload);
+            el.removeAttribute('draggable');
+            return el;
+        } catch (err) {
+            console.error(err);
+            return null;
+        }
+    }
+
+    /**
+     * Render saved cell data into an empty cell. Accepts `text`, `mixed` and legacy `images` cells.
+     * @param {HTMLTableCellElement} newCell
+     * @param {object} cellData
+     */
+    async function fillCell(newCell, cellData) {
+        if (cellData.type === 'mixed' && Array.isArray(cellData.segments)) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'cell-content-wrapper';
+            for (const seg of cellData.segments) {
+                if (seg.type === 'text') {
+                    const s = document.createElement('span');
+                    s.className = 'cell-text';
+                    s.textContent = seg.text != null ? seg.text : '';
+                    wrapper.appendChild(s);
+                } else if (seg.type === 'img' && seg.src) {
+                    const img = document.createElement('img');
+                    img.src = seg.src;
+                    wrapper.appendChild(img);
+                } else if (seg && seg.kind === 'generic' && seg.templateId) {
+                    const el = await buildSavedGeneric(seg);
+                    if (el) wrapper.appendChild(el);
+                }
+            }
+            newCell.appendChild(wrapper);
+        } else if (cellData.type === 'images') {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'cell-content-wrapper';
+            for (const item of cellData.content) {
+                if (typeof item === 'string') {
+                    const img = document.createElement('img');
+                    img.src = item;
+                    wrapper.appendChild(img);
+                } else if (item && item.kind === 'generic' && item.templateId) {
+                    const el = await buildSavedGeneric(item);
+                    if (el) wrapper.appendChild(el);
+                }
+            }
+            const cap = document.createElement('span');
+            cap.className = 'cell-text';
+            cap.textContent = cellData.caption != null ? cellData.caption : '';
+            wrapper.appendChild(cap);
+            newCell.appendChild(wrapper);
+        } else {
+            newCell.textContent = cellData.content;
+        }
+        if (cellData.paintedBorders) {
+            if (cellData.paintedBorders.top) newCell.classList.add('painted-top');
+            if (cellData.paintedBorders.right) newCell.classList.add('painted-right');
+            if (cellData.paintedBorders.bottom) newCell.classList.add('painted-bottom');
+            if (cellData.paintedBorders.left) newCell.classList.add('painted-left');
+        }
+    }
+
+    /**
+     * Accepts the current object format and the older bare array of rows (no team table).
+     * @returns {{ rows: object[][], team: { names?: string[], start?: object[] } }}
+     */
+    function normalizeSaveData(data) {
+        if (Array.isArray(data)) return { rows: data, team: {} };
+        if (data && typeof data === 'object' && Array.isArray(data.rows)) {
+            return { rows: data.rows, team: data.team && typeof data.team === 'object' ? data.team : {} };
+        }
+        throw new Error('Unrecognized table file');
+    }
+
     const rebuildTable = async (data) => {
+        const { rows, team } = normalizeSaveData(data);
+        const columnCount =
+            (rows[0] && rows[0].length) ||
+            (Array.isArray(team.names) && team.names.length) ||
+            (Array.isArray(team.start) && team.start.length) ||
+            getColumnCount();
+
         const tableHead = table.querySelector('thead');
         tableHead.innerHTML = '';
         tableBody.innerHTML = '';
-        if (data.length === 0) return;
 
         const headerRow = tableHead.insertRow();
-        const columnCount = data[0].length;
         for (let i = 0; i < columnCount; i++) {
             const newHeader = document.createElement('th');
             newHeader.textContent = i + 1;
@@ -957,88 +1178,13 @@ document.addEventListener('DOMContentLoaded', () => {
         actionsHeader.textContent = 'Дія';
         headerRow.appendChild(actionsHeader);
 
-        for (const rowData of data) {
+        for (const rowData of rows) {
             const newRow = tableBody.insertRow();
             for (const cellData of rowData) {
-                const newCell = newRow.insertCell();
-                if (cellData.type === 'mixed' && Array.isArray(cellData.segments)) {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'cell-content-wrapper';
-                    for (const seg of cellData.segments) {
-                        if (seg.type === 'text') {
-                            const s = document.createElement('span');
-                            s.className = 'cell-text';
-                            s.textContent = seg.text != null ? seg.text : '';
-                            wrapper.appendChild(s);
-                        } else if (seg.type === 'img' && seg.src) {
-                            const img = document.createElement('img');
-                            img.src = seg.src;
-                            wrapper.appendChild(img);
-                        } else if (seg && seg.kind === 'generic' && seg.templateId) {
-                            const template = templateById.get(seg.templateId);
-                            if (template) {
-                                const payload = {
-                                    kind: 'generic',
-                                    templateId: seg.templateId,
-                                    values: seg.values || {},
-                                    displayName: seg.displayName || template.name,
-                                    customId: seg.customId,
-                                };
-                                try {
-                                    const el = await buildGenericSymbolElement(template, payload.values, payload);
-                                    el.removeAttribute('draggable');
-                                    wrapper.appendChild(el);
-                                } catch (err) {
-                                    console.error(err);
-                                }
-                            }
-                        }
-                    }
-                    newCell.appendChild(wrapper);
-                } else if (cellData.type === 'images') {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'cell-content-wrapper';
-                    for (const item of cellData.content) {
-                        if (typeof item === 'string') {
-                            const img = document.createElement('img');
-                            img.src = item;
-                            wrapper.appendChild(img);
-                        } else if (item && item.kind === 'generic' && item.templateId) {
-                            const template = templateById.get(item.templateId);
-                            if (template) {
-                                const payload = {
-                                    kind: 'generic',
-                                    templateId: item.templateId,
-                                    values: item.values || {},
-                                    displayName: item.displayName || template.name,
-                                    customId: item.customId,
-                                };
-                                try {
-                                    const el = await buildGenericSymbolElement(template, payload.values, payload);
-                                    el.removeAttribute('draggable');
-                                    wrapper.appendChild(el);
-                                } catch (err) {
-                                    console.error(err);
-                                }
-                            }
-                        }
-                    }
-                    const cap = document.createElement('span');
-                    cap.className = 'cell-text';
-                    cap.textContent = cellData.caption != null ? cellData.caption : '';
-                    wrapper.appendChild(cap);
-                    newCell.appendChild(wrapper);
-                } else {
-                    newCell.textContent = cellData.content;
-                }
-                if (cellData.paintedBorders) {
-                    if (cellData.paintedBorders.top) newCell.classList.add('painted-top');
-                    if (cellData.paintedBorders.right) newCell.classList.add('painted-right');
-                    if (cellData.paintedBorders.bottom) newCell.classList.add('painted-bottom');
-                    if (cellData.paintedBorders.left) newCell.classList.add('painted-left');
-                }
+                await fillCell(newRow.insertCell(), cellData);
             }
             addRemoveButton(newRow);
         }
+        await buildTeamTable(columnCount, team);
     };
 });

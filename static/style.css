@@ -445,7 +445,8 @@ th {
 }
 
 /* Actions column */
-thead th:last-child {
+thead th:last-child,
+.team-names-row > td:last-child {
     width: 124px;
 }
 
@@ -566,7 +567,7 @@ td.buttonRow {
     cursor: default;
 }
 
-td.buttonRow::before {
+#editableTable td.buttonRow::before {
     content: 'Крок ' counter(stage);
     display: block;
     margin-bottom: 6px;
@@ -618,6 +619,55 @@ td.buttonRow::before {
     border-color: #f1b5ae;
     background: var(--danger-soft);
     color: var(--danger);
+}
+
+/* ---------- Team table (names + equipment at the start) ---------- */
+.team-card {
+    margin-bottom: 16px;
+}
+
+.team-names-row > td {
+    height: auto;
+    padding: 6px;
+}
+
+td input.member-name-input {
+    padding: 6px 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    font-weight: 600;
+    text-align: center;
+    box-shadow: none;
+}
+
+td input.member-name-input::placeholder {
+    font-weight: 400;
+    color: var(--text-faint);
+}
+
+td input.member-name-input:hover {
+    border-color: var(--border);
+}
+
+td input.member-name-input:focus {
+    border-color: var(--accent);
+    background: var(--surface);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Read-only copy of a name shown in the PNG instead of the input */
+.member-name-export {
+    display: block;
+    padding: 7px 9px;
+    font-weight: 600;
+    text-align: center;
+}
+
+td.team-label-cell {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--text-faint);
 }
 
 /* Add step: full-width button under the table (new steps go to the bottom) */
@@ -704,6 +754,12 @@ td.buttonRow::before {
     margin: 0 40px 14px 0;
     font-size: 1.25rem;
     font-weight: 700;
+}
+
+.help-modal__author {
+    margin: 0 40px 10px 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
 }
 
 .help-modal__lead {
@@ -928,7 +984,6 @@ td.buttonRow::before {
 body.exporting .container {
     width: max-content;
     height: auto;
-    min-height: 100vh;
 }
 
 /* Shrink to the table (sized by applyExportColumnWidths) or the header, whichever is wider */
@@ -936,4 +991,9 @@ body.exporting #main-content {
     flex: none;
     width: max-content;
     overflow: visible;
+}
+
+/* Cards hug their (resized) tables instead of spanning the header width */
+body.exporting .table-card {
+    width: fit-content;
 }
