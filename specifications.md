@@ -113,14 +113,24 @@ The main app (`buildGenericSymbolElement`) and the template editor (`buildPrevie
 
 ### 4.1 Layout
 
-1. **Sidebar** (180 px, left): header "Позначки" with a **+** button, then a grid of draggable symbols at 50×50 px, three per row.
-2. **Main content:** logo, **?** help button, title "Тактика проходження", the table, and a control bar.
+The UI uses a single light theme. Colors, radii and shadows are defined as CSS custom properties on `:root` in `style.css`.
+
+1. **Sidebar** (236 px, left): the title "Позначки" with a "Перетягніть у таблицю" hint, a search box, a **Власна позначка** button, then a grid of draggable symbol tiles, three per row. Symbols render at 50×50 px.
+2. **Main content:**
+   1. **Header:** logo, title "Тактика проходження" and the **?** help button. The logo links to the club's Telegram channel, https://t.me/kpi_globus, which opens in a new tab.
+   2. **Toolbar** (`.controls`, sticky while the table scrolls), in three groups:
+      1. **Учасник −/+**: icon buttons that remove or add a participant.
+      2. **Пензель**.
+      3. **Відкрити**, **Зберегти** and the primary **Завантажити PNG**.
+   3. **Table:** shown as a white card.
+   4. **Додати часову стадію:** a full-width button directly under the table, because new rows are added at the bottom.
+3. **Narrow screens:** below 900 px, toolbar buttons show icons only, with their names kept in tooltips. Below 640 px, the sidebar moves above the table.
 
 ### 4.2 Sidebar symbols
 
 1. On load, the sidebar shows every manifest **frame** (as `<img>` with a `name` tooltip), followed by the user's **custom symbols** from `localStorage`.
-2. Generic templates are **not** shown directly. The user creates presets from them with **+**.
-3. **Add a custom symbol (+):** opens the modal "Нова позначка":
+2. Generic templates are **not** shown directly. The user creates presets from them with **Власна позначка**.
+3. **Add a custom symbol (Власна позначка):** opens the modal "Нова позначка":
    1. The user picks a template ("Шаблон") from the dropdown.
    2. The form shows one input per add-up (first 3 only): a text field, or a checkbox for `control: "checkbox"`.
    3. The user optionally enters a display name ("Назва (підказка)"). It defaults to the template name, then the template id.
@@ -128,14 +138,19 @@ The main app (`buildGenericSymbolElement`) and the template editor (`buildPrevie
    5. If no template is chosen, the app alerts "Оберіть шаблон.".
 4. **Delete a custom symbol:** right-click it in the sidebar and confirm. It is removed from storage and from the sidebar. Copies already placed in table cells stay.
 5. A custom entry whose `templateId` no longer exists in the manifest is silently skipped.
+6. Custom symbols have an accent-colored corner so they can be told apart from manifest frames.
+7. **Search:** typing in the search box hides sidebar symbols whose tooltip (`title`) doesn't contain the query (case-insensitive). If nothing matches, the sidebar shows "Нічого не знайдено". Symbols added later are filtered too.
 
 ### 4.3 Table structure
 
 1. The initial table has 3 participant columns, 2 rows filled with `-`, and a final **"Дія"** (actions) column.
-2. Every row ends with a cell holding a **"Видалити часову стадію"** button that deletes the row.
-3. **Додати часову стадію:** appends a row with `-` in every participant cell, plus the delete button.
-4. **Додати учасника:** inserts a column before "Дія". Its header is the previous last header number + 1. Its cells are filled with `-`.
-5. **Видалити учасника:** removes the last participant column. The last remaining participant column cannot be removed (alert "Cannot remove the last column.").
+2. Every row ends with an actions cell (`.buttonRow`). It shows the label "Крок N" (a CSS counter, so it renumbers automatically) and three icon buttons:
+   1. **Додати крок вище** (`.row-insert-above-btn`) inserts an empty row above this one.
+   2. **Додати крок нижче** (`.row-insert-below-btn`) inserts an empty row below this one.
+   3. **Видалити крок** (`.row-remove-btn`) deletes this row.
+3. **Додати часову стадію** (under the table) appends an empty row at the bottom. An empty row has `-` in every participant cell, plus its actions cell.
+4. **Учасник +** (`#addColBtn`): inserts a column before "Дія". Its header is the previous last header number + 1. Its cells are filled with `-`.
+5. **Учасник −** (`#removeColBtn`): removes the last participant column. The last remaining participant column cannot be removed (alert "Не можна видалити останнього учасника.").
 
 ### 4.4 Placing symbols (drag and drop)
 
@@ -166,7 +181,7 @@ The main app (`buildGenericSymbolElement`) and the template editor (`buildPrevie
 
 ### 4.7 Brush (Пензель)
 
-1. The **Пензель** button toggles brush mode (the button gets the `brush-active` class).
+1. The **Пензель** button toggles brush mode. While it is on, the button gets the `brush-active` class and `aria-pressed="true"`, the toolbar shows a hint, and table cells use a crosshair cursor.
 2. In brush mode, clicking within **8 px** of a cell edge toggles a 3 px **orange** line on the nearest edge (`painted-top|right|bottom|left`).
 3. In brush mode, clicks do not edit text.
 
@@ -178,15 +193,25 @@ The app downloads `table-data.json` in the format described in §5. The "Дія"
 
 1. The user picks a `.json` file. The app replaces the whole table with its contents.
 2. Headers are regenerated as `1..N` + "Дія", where N is the length of the first row.
-3. Invalid JSON produces the alert "Invalid JSON file.".
+3. Invalid JSON produces the alert "Некоректний файл JSON."
 4. Generic segments whose template is missing from the manifest are skipped silently.
 
-### 4.10 Export (Завантажити)
+### 4.10 Export (Завантажити PNG)
 
-1. The app downloads `table-export.png`, a raster of `#main-content` made with `html2canvas`.
-2. During capture, the sidebar, control bar, **?** and **+** buttons and the "Дія" column are hidden.
-3. During capture, `<img>` sources are inlined as data URLs, and inline generic SVGs are temporarily replaced by `<img>` elements with SVG data URLs.
-4. Everything is restored afterwards, even if the export fails. On failure, the app alerts "Sorry, there was an error exporting the table.".
+1. The app downloads `table-export.png`, a raster of `#main-content` made with `html2canvas`. The PNG always contains the **whole** table, however long, not only the part visible on screen.
+   1. During capture, `body.exporting` turns off the inner scrolling of the 100vh layout, so `#main-content` grows to its full height.
+   2. The window is scrolled to the top, and html2canvas gets the full document size (`windowWidth`, `windowHeight`) with `scrollX`/`scrollY` set to 0.
+   3. Afterwards, the scroll positions of the window and of `#main-content` are restored.
+2. **Column width in the PNG:** every participant column gets the same width.
+   1. The width is the widest single line of symbols in any cell (images and generic symbols, plus the gaps between them), plus the cell padding, plus a margin (`EXPORT_CELL_MARGIN`, 24 px).
+   2. Columns are never narrower than `EXPORT_MIN_CELL_WIDTH` (120 px), which also applies when there are no symbols.
+   3. Text in a cell wraps within that width.
+   4. The captured area shrinks to the wider of the table and the header, so the PNG has no empty space on the right.
+   5. The on-screen column widths are restored after the export.
+3. During capture, the sidebar, toolbar, **?** button, **Власна позначка** button, **Додати часову стадію** button and the "Дія" column are hidden.
+4. During capture, `<img>` sources are inlined as data URLs, and inline generic SVGs are temporarily replaced by `<img>` elements with SVG data URLs.
+5. Table cells must keep an explicit background color and have no CSS transitions. Otherwise html2canvas paints artifacts into the PNG.
+6. Everything is restored afterwards, even if the export fails. On failure, the app alerts "Не вдалося експортувати таблицю."
 
 ### 4.11 Help and modals
 
@@ -295,13 +320,13 @@ This is a local-only tool for maintaining `genericTemplates`. It is not deployed
 1. A JSON file that is valid but has the wrong structure can crash `rebuildTable`. Only parse errors are caught.
 2. Opening an empty array (`[]`) clears both the header and the body, which leaves no table.
 3. The "add participant" column number is computed from the last header text. A non-numeric header gives `NaN`.
-4. Some messages are in English while the rest of the UI is Ukrainian: "Cannot remove the last column.", "Invalid JSON file." and the export error. `<html lang="en">` is also wrong for a Ukrainian UI.
-5. The help modal and the add-symbol modal have no focus trap.
-6. Generic symbols render at a fixed 50×50 px. Overlay coordinates are in each base SVG's own coordinate system.
-7. `update_images.py` is obsolete:
+4. The help modal and the add-symbol modal have no focus trap.
+5. Generic symbols render at a fixed 50×50 px. Overlay coordinates are in each base SVG's own coordinate system.
+6. `update_images.py` is obsolete:
    1. Its `SCRIPT_FILE` path has a typo (`statis/script.js`).
    2. It targets an `imageUrls` array that no longer exists.
    3. It ignores `.svg` files.
 
    The manifest is now `image.json`, maintained by hand or with the template editor.
-8. Custom symbols live in `localStorage`, so they are lost when site data is cleared and are not synced across devices.
+7. Custom symbols live in `localStorage`, so they are lost when site data is cleared and are not synced across devices.
+8. Pressing **Enter** in a mixed-cell text input saves it, and the blur that follows tries to save it again. This logs a harmless `replaceWith` DOM error in the console. The saved text is correct.

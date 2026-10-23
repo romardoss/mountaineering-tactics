@@ -194,6 +194,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    const symbolSearch = document.getElementById('symbolSearch');
+    const symbolSearchEmpty = document.getElementById('symbolSearchEmpty');
+
+    /** Hide sidebar symbols whose tooltip doesn't match the search box. */
+    function applySymbolFilter() {
+        if (!symbolSearch) return;
+        const query = symbolSearch.value.trim().toLowerCase();
+        let visible = 0;
+        for (const el of sidebarSymbols.children) {
+            const match = !query || (el.title || '').toLowerCase().includes(query);
+            el.hidden = !match;
+            if (match) visible++;
+        }
+        if (symbolSearchEmpty) symbolSearchEmpty.hidden = !query || visible > 0;
+    }
+
+    if (symbolSearch) {
+        symbolSearch.addEventListener('input', applySymbolFilter);
+        new MutationObserver(applySymbolFilter).observe(sidebarSymbols, { childList: true });
+    }
+
     promiseJson.then((raw) => {
         manifest = normalizeManifest(raw);
         manifest.genericTemplates.forEach((t) => templateById.set(t.id, t));
@@ -341,17 +362,62 @@ document.addEventListener('DOMContentLoaded', () => {
     brushBtn.addEventListener('click', () => {
         isBrushActive = !isBrushActive;
         brushBtn.classList.toggle('brush-active');
+        brushBtn.setAttribute('aria-pressed', String(isBrushActive));
     });
 
+    /**
+     * Insert an empty row (`-` in every participant cell) at the given tbody index (-1 = end).
+     * @param {number} index
+     */
+    function insertEmptyRow(index) {
+        const newRow = tableBody.insertRow(index);
+        const columnCount = table.querySelector('thead tr').childElementCount - 1;
+        for (let i = 0; i < columnCount; i++) {
+            const newCell = newRow.insertCell();
+            newCell.textContent = '-';
+        }
+        addRemoveButton(newRow);
+        return newRow;
+    }
+
+    function createRowActionButton(className, label, svgPaths, onClick) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `row-action-btn ${className}`;
+        btn.title = label;
+        btn.setAttribute('aria-label', label);
+        btn.innerHTML = `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${svgPaths}</svg>`;
+        btn.addEventListener('click', onClick);
+        return btn;
+    }
+
+    /** Actions cell: insert step above / below, delete step. */
     const addRemoveButton = (row) => {
         const newCell = row.insertCell();
-        const removeBtn = document.createElement('button');
         newCell.className = 'buttonRow';
-        removeBtn.textContent = 'Видалити часову стадію';
-        removeBtn.addEventListener('click', () => {
-            row.remove();
-        });
-        newCell.appendChild(removeBtn);
+        const actions = document.createElement('div');
+        actions.className = 'row-actions';
+        actions.append(
+            createRowActionButton(
+                'row-insert-above-btn',
+                'Додати крок вище',
+                '<rect x="3" y="13" width="18" height="8" rx="1"/><path d="M12 3v6M9 6h6"/>',
+                () => insertEmptyRow(row.sectionRowIndex),
+            ),
+            createRowActionButton(
+                'row-insert-below-btn',
+                'Додати крок нижче',
+                '<rect x="3" y="3" width="18" height="8" rx="1"/><path d="M12 15v6M9 18h6"/>',
+                () => insertEmptyRow(row.sectionRowIndex + 1),
+            ),
+            createRowActionButton(
+                'row-remove-btn',
+                'Видалити крок',
+                '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
+                () => row.remove(),
+            ),
+        );
+        newCell.appendChild(actions);
     };
 
     const tableBody = table.querySelector('tbody');
@@ -385,12 +451,31 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     }
 
+    /** Cell currently highlighted as a drop target (visual only). */
+    let dropTargetCell = null;
+
+    function setDropTarget(cell) {
+        if (cell === dropTargetCell) return;
+        dropTargetCell?.classList.remove('drop-target');
+        dropTargetCell = cell;
+        dropTargetCell?.classList.add('drop-target');
+    }
+
     tableBody.addEventListener('dragover', (e) => {
         e.preventDefault();
+        const cell = e.target.closest && e.target.closest('td');
+        setDropTarget(cell && !cell.classList.contains('buttonRow') ? cell : null);
     });
+
+    tableBody.addEventListener('dragleave', (e) => {
+        if (!e.relatedTarget || !tableBody.contains(e.relatedTarget)) setDropTarget(null);
+    });
+
+    document.addEventListener('dragend', () => setDropTarget(null));
 
     tableBody.addEventListener('drop', async (e) => {
         e.preventDefault();
+        setDropTarget(null);
         let targetCell = e.target;
         while (targetCell && targetCell.tagName !== 'TD') {
             targetCell = targetCell.parentElement;
@@ -623,13 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     addRowBtn.addEventListener('click', () => {
-        const newRow = tableBody.insertRow();
-        const columnCount = table.querySelector('thead tr').childElementCount - 1;
-        for (let i = 0; i < columnCount; i++) {
-            const newCell = newRow.insertCell();
-            newCell.textContent = '-';
-        }
-        addRemoveButton(newRow);
+        insertEmptyRow(-1);
     });
 
     addColBtn.addEventListener('click', () => {
@@ -650,7 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const headerRow = table.querySelector('thead tr');
         const headerCells = headerRow.querySelectorAll('th');
         if (headerCells.length <= 2) {
-            alert('Cannot remove the last column.');
+            alert('Не можна видалити останнього учасника.');
             return;
         }
         headerCells[headerCells.length - 2].remove();
@@ -668,8 +747,58 @@ document.addEventListener('DOMContentLoaded', () => {
         return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(s)}`;
     }
 
+    /** Extra space added to the widest symbol row when sizing export columns. */
+    const EXPORT_CELL_MARGIN = 24;
+    /** Export columns are never narrower than this (keeps text-only columns readable). */
+    const EXPORT_MIN_CELL_WIDTH = 120;
+
+    /**
+     * Width of the widest single line of symbols in any cell (images + generic symbols + gaps between them).
+     * @returns {number} 0 when no cell holds a symbol
+     */
+    function measureWidestSymbolRow() {
+        let widest = 0;
+        tableBody.querySelectorAll('.cell-content-wrapper').forEach((wrapper) => {
+            const media = [...wrapper.children].filter(
+                (ch) => ch.tagName === 'IMG' || ch.classList.contains('symbol-generic'),
+            );
+            if (!media.length) return;
+            const gap = parseFloat(getComputedStyle(wrapper).columnGap) || 0;
+            const width = media.reduce((sum, el) => sum + el.getBoundingClientRect().width, 0) + gap * (media.length - 1);
+            widest = Math.max(widest, width);
+        });
+        return widest;
+    }
+
+    /**
+     * For export: give every participant column the same width — the widest symbol row plus a margin.
+     * @returns {() => void} restores the original column/table widths
+     */
+    function applyExportColumnWidths() {
+        const widest = measureWidestSymbolRow();
+        const headers = [...table.querySelectorAll('thead th')].slice(0, -1);
+        if (!headers.length) return () => {};
+        const sample = tableBody.querySelector('td');
+        const cs = sample ? getComputedStyle(sample) : null;
+        const chrome = cs
+            ? parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth)
+            : 0;
+        const colWidth = Math.ceil(Math.max(EXPORT_MIN_CELL_WIDTH, widest + chrome + EXPORT_CELL_MARGIN));
+        const saved = { table: table.style.width, headers: headers.map((th) => th.style.width) };
+        headers.forEach((th) => {
+            th.style.width = `${colWidth}px`;
+        });
+        table.style.width = `${colWidth * headers.length}px`;
+        return () => {
+            table.style.width = saved.table;
+            headers.forEach((th, i) => {
+                th.style.width = saved.headers[i];
+            });
+        };
+    }
+
     exportBtn.addEventListener('click', async () => {
-        const elementsToHide = [sidebar, controls, helpBtn, addSymbolBtn].filter(Boolean);
+        const elementsToHide = [sidebar, controls, helpBtn, addSymbolBtn, addRowBtn].filter(Boolean);
         const actionsColumnCells = table.querySelectorAll('tr > :last-child');
         const visuals = collectVisualExportNodes();
         const originalSrc = new Map();
@@ -685,8 +814,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
+        // Main column normally scrolls inside a 100vh layout; let it grow to full height so the whole table is captured
+        const mainContent = document.getElementById('main-content');
+        const savedScroll = { mainTop: mainContent.scrollTop, mainLeft: mainContent.scrollLeft, x: window.scrollX, y: window.scrollY };
+        document.body.classList.add('exporting');
         elementsToHide.forEach((el) => el.classList.add('export-hidden'));
         actionsColumnCells.forEach((cell) => cell.classList.add('export-hidden'));
+        // Measure before SVGs are swapped for raster copies
+        const restoreColumnWidths = applyExportColumnWidths();
 
         try {
             for (const el of visuals) {
@@ -706,7 +841,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            const canvas = await html2canvas(document.getElementById('main-content'));
+            window.scrollTo(0, 0);
+            const canvas = await html2canvas(mainContent, {
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: document.documentElement.scrollWidth,
+                windowHeight: document.documentElement.scrollHeight,
+            });
             const a = document.createElement('a');
             a.href = canvas.toDataURL('image/png');
             a.download = 'table-export.png';
@@ -715,7 +856,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.removeChild(a);
         } catch (error) {
             console.error('Error exporting table:', error);
-            alert('Sorry, there was an error exporting the table.');
+            alert('Не вдалося експортувати таблицю.');
         } finally {
             visuals.forEach((el) => {
                 if (el.tagName === 'IMG' && originalSrc.has(el)) {
@@ -728,8 +869,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
+            restoreColumnWidths();
             elementsToHide.forEach((el) => el.classList.remove('export-hidden'));
             actionsColumnCells.forEach((cell) => cell.classList.remove('export-hidden'));
+            document.body.classList.remove('exporting');
+            mainContent.scrollTop = savedScroll.mainTop;
+            mainContent.scrollLeft = savedScroll.mainLeft;
+            window.scrollTo(savedScroll.x, savedScroll.y);
         }
     });
 
@@ -787,7 +933,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 rebuildTable(data).catch((err) => console.error(err));
             } catch (error) {
                 console.error('Error parsing JSON file:', error);
-                alert('Invalid JSON file.');
+                alert('Некоректний файл JSON.');
             }
         };
         reader.readAsText(file);

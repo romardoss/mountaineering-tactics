@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,50 +9,95 @@
 </head>
 <body>
     <div class="container">
-        <div id="sidebar">
+        <aside id="sidebar">
             <div class="sidebar-header">
                 <h2>Позначки</h2>
-                <button type="button" id="addSymbolBtn" class="add-symbol-btn" title="Додати власну позначку" aria-label="Додати позначку">+</button>
+                <span class="sidebar-header__hint">Перетягніть у таблицю</span>
             </div>
+            <label class="sidebar-search">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input type="search" id="symbolSearch" placeholder="Пошук позначки…" autocomplete="off" aria-label="Пошук позначки">
+            </label>
+            <button type="button" id="addSymbolBtn" class="add-symbol-btn" title="Додати власну позначку" aria-label="Додати позначку">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                <span>Власна позначка</span>
+            </button>
             <div class="sidebar-symbols" id="sidebarSymbols"></div>
-        </div>
-        <div id="main-content">
-            <img id="icon" src="images/logo.svg" alt="">
-            <button type="button" id="helpBtn" class="help-link" title="Як користуватися" aria-haspopup="dialog" aria-controls="helpModal" aria-expanded="false">?</button>
-            <h1>Тактика проходження</h1>
-            <table id="editableTable">
-                <thead>
-                    <tr>
-                        <th>1</th>
-                        <th>2</th>
-                        <th>3</th>
-                        <th>Дія</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                    </tr>
-                    <tr>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                    </tr>
-                </tbody>
-            </table>
-            <div class="controls">
-                <button id="addRowBtn">Додати часову стадію</button>
-                <button id="addColBtn">Додати учасника</button>
-                <button id="removeColBtn">Видалити учасника</button>
-                <button id="brushBtn">Пензель</button>
-                <button id="saveBtn">Зберегти</button>
-                <button id="openBtn">Відкрити</button>
-                <button id="exportBtn">Завантажити</button>
+            <p class="sidebar-empty" id="symbolSearchEmpty" hidden>Нічого не знайдено</p>
+        </aside>
+        <main id="main-content">
+            <header class="page-header">
+                <a class="logo-link" href="https://t.me/kpi_globus" target="_blank" rel="noopener noreferrer" title="Турклуб КПІ «Глобус» у Telegram">
+                    <img id="icon" src="images/logo.svg" alt="Турклуб КПІ «Глобус»">
+                </a>
+                <h1>Тактика проходження</h1>
+                <button type="button" id="helpBtn" class="help-link" title="Як користуватися" aria-haspopup="dialog" aria-controls="helpModal" aria-expanded="false">?</button>
+            </header>
+            <div class="controls" role="toolbar" aria-label="Дії з таблицею">
+                <div class="controls__group" role="group" aria-label="Учасники">
+                    <span class="controls__label">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        Учасник
+                    </span>
+                    <button id="removeColBtn" class="btn btn--icon btn--danger" title="Видалити останнього учасника" aria-label="Видалити учасника">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>
+                    </button>
+                    <button id="addColBtn" class="btn btn--icon" title="Додати учасника" aria-label="Додати учасника">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                    </button>
+                </div>
+                <div class="controls__group">
+                    <button id="brushBtn" class="btn btn--brush" title="Пензель: клацніть по краю клітинки, щоб намалювати лінію" aria-pressed="false">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>
+                        <span>Пензель</span>
+                    </button>
+                </div>
+                <div class="controls__group controls__group--end">
+                    <button id="openBtn" class="btn" title="Відкрити таблицю з файлу JSON">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                        <span>Відкрити</span>
+                    </button>
+                    <button id="saveBtn" class="btn" title="Зберегти таблицю у файл JSON">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+                        <span>Зберегти</span>
+                    </button>
+                    <button id="exportBtn" class="btn btn--primary" title="Завантажити зображення таблиці (PNG)">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+                        <span>Завантажити PNG</span>
+                    </button>
+                </div>
                 <input type="file" id="fileInput" accept=".json" style="display: none;">
+                <p class="brush-hint" role="status">Режим пензля: клацніть біля краю клітинки, щоб намалювати або прибрати лінію. Правий клік — прибрати всі лінії клітинки.</p>
             </div>
-        </div>
+            <div class="table-card">
+                <table id="editableTable">
+                    <thead>
+                        <tr>
+                            <th>1</th>
+                            <th>2</th>
+                            <th>3</th>
+                            <th>Дія</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <button type="button" id="addRowBtn" class="add-row-btn" title="Додати новий крок у кінець таблиці">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                <span>Додати часову стадію</span>
+            </button>
+        </main>
     </div>
 
     <div id="addSymbolModal" class="help-modal" hidden role="dialog" aria-modal="true" aria-labelledby="addSymbolModalTitle">
@@ -60,6 +105,7 @@
         <div class="help-modal__panel add-symbol-modal__panel">
             <button type="button" class="help-modal__close" data-close-add-symbol aria-label="Закрити">&times;</button>
             <h2 id="addSymbolModalTitle">Нова позначка</h2>
+            <p class="help-modal__lead">Оберіть шаблон і заповніть поля — позначка з’явиться у списку зліва.</p>
             <form id="addSymbolForm" class="add-symbol-form">
                 <label class="add-symbol-form__row">
                     <span>Шаблон</span>
@@ -73,8 +119,8 @@
                     <input type="text" id="addSymbolDisplayName" name="displayName" placeholder="Напр. мотузка 40м" autocomplete="off">
                 </label>
                 <div class="add-symbol-form__actions">
-                    <button type="submit" class="add-symbol-form__submit">Додати</button>
-                    <button type="button" class="add-symbol-form__cancel" data-close-add-symbol>Скасувати</button>
+                    <button type="button" class="btn add-symbol-form__cancel" data-close-add-symbol>Скасувати</button>
+                    <button type="submit" class="btn btn--primary add-symbol-form__submit">Додати</button>
                 </div>
             </form>
         </div>
@@ -87,17 +133,17 @@
             <h2 id="helpModalTitle">Як користуватися</h2>
             <div class="help-modal__body">
                 <ul>
-                    <li>Перетягніть позначки зліва в клітинки таблиці.</li>
-                    <li>Власні позначки (після <strong>+</strong>): <strong>правий клік</strong> по іконці в списку — прибрати її зі списку (у клітинках таблиці вже вставлені зображення не зникають).</li>
-                    <li>Клацніть по клітинці, щоб змінити текст. Якщо рядок закінчується позначкою — клацніть поза нею, щоб додати текст після неї; якщо вже закінчується текстом — такий клік відкриває редагування останнього тексту. Правий клік по зображенню в клітинці — видалити його.</li>
+                    <li>Перетягніть позначки зліва в клітинки таблиці. Пошук над списком фільтрує позначки за назвою.</li>
+                    <li>Власні позначки (кнопка <strong>Власна позначка</strong>): <strong>правий клік</strong> по іконці в списку — прибрати її зі списку (у клітинках таблиці вже вставлені зображення не зникають).</li>
+                    <li>Клацніть по клітинці, щоб змінити текст. Якщо рядок закінчується позначкою — клацніть поза нею, щоб додати текст після неї; якщо вже закінчується текстом — такий клік відкриває редагування останнього тексту. <kbd>Enter</kbd> — зберегти, <kbd>Esc</kbd> — скасувати. Правий клік по зображенню в клітинці — видалити його.</li>
                     <li><strong>Пензель</strong>: клацніть по краю клітинки, щоб намалювати або прибрати кольорову лінію.</li>
-                    <li><strong>Додати / видалити учасника</strong> — змінює кількість колонок; <strong>Додати часову стадію</strong> — новий рядок.</li>
+                    <li><strong>Учасник +/−</strong> — змінює кількість колонок; <strong>Додати часову стадію</strong> (під таблицею) — новий рядок у кінці. У колонці «Дія» кожного кроку: вставити рядок вище або нижче, а кошик видаляє рядок.</li>
                     <li><strong>Зберегти</strong> / <strong>Відкрити</strong> — експорт і імпорт таблиці у JSON.</li>
-                    <li><strong>Завантажити</strong> — зображення таблиці (PNG).</li>
+                    <li><strong>Завантажити PNG</strong> — зображення таблиці.</li>
                 </ul>
             </div>
             <p class="help-modal__more">
-                <a href="https://t.me/romardoss" target="_blank" rel="noopener noreferrer">For other questions</a>
+                <a href="https://t.me/romardoss" target="_blank" rel="noopener noreferrer">Інші питання</a>
             </p>
         </div>
     </div>
